@@ -11,6 +11,10 @@ Story 1 / Precondition 1 prepares the repository and development environment.
 The app currently displays a responsive setup screen. Gameplay starts in Level 1;
 there is no playable run or Start Game control at this stage.
 
+[Public setup screen](https://romasho.github.io/alchemists-cauldron/)
+
+![Setup screen at 375 px](docs/setup-mobile.png)
+
 In the finished game, players add limited ingredients to a cauldron and try to
 match three recipe ranges before time or lives run out.
 
@@ -110,6 +114,8 @@ task, screenshot, deployment, completion/deadline dates, and scored self-check.
 Fill the actual course deadline from RS App; it is not specified in the task.
 
 GitHub Actions repeats the quality checks and production build for pushes and PRs.
+The deployment workflow publishes the checked `story-1` build to GitHub Pages.
+The final story PR stays open while its setup screen remains publicly available.
 
 ## Precondition 1 self-check
 
