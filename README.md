@@ -14,12 +14,12 @@ there is no playable run or Start Game control at this stage.
 In the finished game, players add limited ingredients to a cauldron and try to
 match three recipe ranges before time or lives run out.
 
-| Stage | Scope | Points |
-| --- | --- | --- |
-| Precondition 1 | Repository, structure, bundler, TypeScript, linting, formatting, Git hooks | 58 |
-| Level 1 | Shelf, cauldron, parameter bars, brewing, timer, pause, leaderboard | 170 |
-| Level 2 | Difficulty selection, save and continue | 50 |
-| Level 3 | Drag and drop, tooltips, reactions, Pour Out, effects, shortcuts | 115 |
+| Stage          | Scope                                                                      | Points |
+| -------------- | -------------------------------------------------------------------------- | ------ |
+| Precondition 1 | Repository, structure, bundler, TypeScript, linting, formatting, Git hooks | 58     |
+| Level 1        | Shelf, cauldron, parameter bars, brewing, timer, pause, leaderboard        | 170    |
+| Level 2        | Difficulty selection, save and continue                                    | 50     |
+| Level 3        | Drag and drop, tooltips, reactions, Pour Out, effects, shortcuts           | 115    |
 
 Shared requirements add 30 points at Level 1. The complete assignment is worth
 393 points. Only Precondition 1 is implemented here.
@@ -37,18 +37,18 @@ Open the local URL printed by Vite (normally <http://localhost:5173>).
 The page uses TypeScript and CSS with no runtime libraries or frameworks.
 Vite and the quality tools are development dependencies only.
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the development server with hot updates |
-| `npm run build` | Typecheck and build production files into `dist/` |
-| `npm run preview` | Serve the production build locally |
-| `npm run typecheck` | Check browser and tooling TypeScript without emitting files |
-| `npm run lint` | Run ESLint; warnings also fail the check |
-| `npm run lint:fix` | Apply available ESLint fixes |
-| `npm run format` | Format supported project files with Prettier |
-| `npm run format:check` | Check formatting without changing files |
+| Command                | Purpose                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `npm run dev`          | Start the development server with hot updates               |
+| `npm run build`        | Typecheck and build production files into `dist/`           |
+| `npm run preview`      | Serve the production build locally                          |
+| `npm run typecheck`    | Check browser and tooling TypeScript without emitting files |
+| `npm run lint`         | Run ESLint; warnings also fail the check                    |
+| `npm run lint:fix`     | Apply available ESLint fixes                                |
+| `npm run format`       | Format supported project files with Prettier                |
+| `npm run format:check` | Check formatting without changing files                     |
 | `npm run test:tooling` | Test commit-message validation using Node's built-in runner |
-| `npm run check` | Run typecheck, lint, formatting and tooling tests |
+| `npm run check`        | Run typecheck, lint, formatting and tooling tests           |
 
 Vite uses a relative asset base so `dist/` can be hosted at a domain root or under
 a repository subpath. Source SVG imports are included in the production build.
@@ -113,16 +113,16 @@ GitHub Actions repeats the quality checks and production build for pushes and PR
 
 ## Precondition 1 self-check
 
-| Task | Implementation | Points |
-| --- | --- | --- |
-| PRE-QS-1-1-1 | Repository, README, ignore rules, dependency lockfile | 10 |
-| PRE-QS-1-1-2 | Domain folders with documented responsibilities | 10 |
-| PRE-QS-1-1-3 | Official RS School PR template adapted to this story | 5 |
-| PRE-QS-1-2-1 | Vite development server, production build, bundled SVG | 10 |
-| PRE-QS-1-2-2 | Strict TypeScript, checked indexed access and optional properties | 5 |
-| PRE-QS-1-2-3 | Typed ESLint checks; explicit `any` and console output prohibited | 5 |
-| PRE-QS-1-2-4 | Prettier configuration and format/check commands | 5 |
-| PRE-QS-1-2-5 | Husky commit validation and pre-push lint/format checks | 8 |
+| Task         | Implementation                                                    | Points |
+| ------------ | ----------------------------------------------------------------- | ------ |
+| PRE-QS-1-1-1 | Repository, README, ignore rules, dependency lockfile             | 10     |
+| PRE-QS-1-1-2 | Domain folders with documented responsibilities                   | 10     |
+| PRE-QS-1-1-3 | Official RS School PR template adapted to this story              | 5      |
+| PRE-QS-1-2-1 | Vite development server, production build, bundled SVG            | 10     |
+| PRE-QS-1-2-2 | Strict TypeScript, checked indexed access and optional properties | 5      |
+| PRE-QS-1-2-3 | Typed ESLint checks; explicit `any` and console output prohibited | 5      |
+| PRE-QS-1-2-4 | Prettier configuration and format/check commands                  | 5      |
+| PRE-QS-1-2-5 | Husky commit validation and pre-push lint/format checks           | 8      |
 
 See the [full Precondition 1 criteria](https://github.com/rolling-scopes-school/qualifying-stage/blob/main/tasks/game-alchemists-cauldron/precondition-user-story.md)
 and [common requirements](https://github.com/rolling-scopes-school/qualifying-stage/blob/main/tasks/game-alchemists-cauldron/common-requirements.md).
