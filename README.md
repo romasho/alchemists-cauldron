@@ -7,13 +7,17 @@ Built for the [RS School assignment](https://github.com/rolling-scopes-school/qu
 
 ## Current scope
 
-Story 1 / Precondition 1 prepares the repository and development environment.
-The app currently displays a responsive setup screen. Gameplay starts in Level 1;
-there is no playable run or Start Game control at this stage.
+Precondition 1 and all Level 1 stories (US 1.1–1.6) are implemented.
+Level 1 uses the fixed Medium rules: six ingredients, four portions per cauldron,
+150 seconds, three lives, ±8 brew tolerance, 200 points and up to 10 bonus seconds.
+The source includes the full eight-ingredient catalogue and all twenty recipes;
+only Medium recipes are selected in Level 1. Levels 2 and 3 are not implemented.
 
-[Public setup screen](https://romasho.github.io/alchemists-cauldron/)
+[Public deployment](https://romasho.github.io/alchemists-cauldron/) (updated when changes reach `story-1`).
 
-![Setup screen at 375 px](docs/setup-mobile.png)
+![Level 1 gameplay](docs/level-1-desktop.png)
+
+[Mobile gameplay at 375 px](docs/level-1-mobile.png)
 
 In the finished game, players add limited ingredients to a cauldron and try to
 match three recipe ranges before time or lives run out.
@@ -26,7 +30,29 @@ match three recipe ranges before time or lives run out.
 | Level 3        | Drag and drop, tooltips, reactions, Pour Out, effects, shortcuts           | 115    |
 
 Shared requirements add 30 points at Level 1. The complete assignment is worth
-393 points. Only Precondition 1 is implemented here.
+393 points.
+
+## How to play
+
+1. Click **Start Game**. Each ingredient receives 2–15 portions.
+2. Click ingredient cards to add up to four portions, in order. T, D and M on each
+   card mean Temperature, Density and Magic Power. The bars show signed sums,
+   target zones and a moving marker; green means inside the exact recipe range.
+3. Click **Brew potion** to check all three sums with ±8 tolerance. Success awards
+   200 points, adds 10 seconds (maximum 150), and selects a random Medium recipe.
+   Failure loses one life. Both outcomes empty the cauldron and spend the portions.
+4. **Pause** freezes the timer and hides the play field. **Resume** continues;
+   **Exit to Menu** abandons the run. Switching to another tab also pauses.
+5. Time, lives or exhausted ingredients end the run. A final mixture can still
+   be brewed after the shelf is exhausted. **Play again** starts with new stock.
+6. Qualifying results can be saved to the local Top-10 with a 2–15 character name
+   using letters, digits, spaces, `_` or `-`. Equal scores keep earlier results
+   first. Open the board from **Menu** or **Game Over**; clearing it requires an
+   in-app confirmation. Storage errors show feedback and never stop gameplay.
+
+**Help** explains the rules. Controls use native buttons and support keyboard
+focus. Layouts adapt from 375 px to 1920 px; reduced motion is respected.
+Leaderboard data stays in this browser. Runs are not saved across reloads in Level 1.
 
 ## Requirements and development
 
@@ -41,18 +67,19 @@ Open the local URL printed by Vite (normally <http://localhost:5173>).
 The page uses TypeScript and CSS with no runtime libraries or frameworks.
 Vite and the quality tools are development dependencies only.
 
-| Command                | Purpose                                                     |
-| ---------------------- | ----------------------------------------------------------- |
-| `npm run dev`          | Start the development server with hot updates               |
-| `npm run build`        | Typecheck and build production files into `dist/`           |
-| `npm run preview`      | Serve the production build locally                          |
-| `npm run typecheck`    | Check browser and tooling TypeScript without emitting files |
-| `npm run lint`         | Run ESLint; warnings also fail the check                    |
-| `npm run lint:fix`     | Apply available ESLint fixes                                |
-| `npm run format`       | Format supported project files with Prettier                |
-| `npm run format:check` | Check formatting without changing files                     |
-| `npm run test:tooling` | Test commit-message validation using Node's built-in runner |
-| `npm run check`        | Run typecheck, lint, formatting and tooling tests           |
+| Command                | Purpose                                                      |
+| ---------------------- | ------------------------------------------------------------ |
+| `npm run dev`          | Start the development server with hot updates                |
+| `npm run build`        | Typecheck and build production files into `dist/`            |
+| `npm run preview`      | Serve the production build locally                           |
+| `npm run typecheck`    | Check browser and tooling TypeScript without emitting files  |
+| `npm run lint`         | Run ESLint; warnings also fail the check                     |
+| `npm run lint:fix`     | Apply available ESLint fixes                                 |
+| `npm run format`       | Format supported project files with Prettier                 |
+| `npm run format:check` | Check formatting without changing files                      |
+| `npm run test:tooling` | Test commit-message validation using Node's built-in runner  |
+| `npm run test:game`    | Test game rules, timer, pause, stock and leaderboard storage |
+| `npm run check`        | Run typecheck, lint, formatting and tooling tests            |
 
 Vite uses a relative asset base so `dist/` can be hosted at a domain root or under
 a repository subpath. Source SVG imports are included in the production build.
@@ -80,7 +107,7 @@ src/
   main.ts       # Application entry point
 ```
 
-The domain folders contain short README files until their stories add code.
+The domain folders contain data, pure rules, state transitions and persistence.
 Keep rendering in `ui/`; game logic must not depend on the DOM, and storage
 validation belongs in `storage/`.
 
@@ -115,7 +142,7 @@ Fill the actual course deadline from RS App; it is not specified in the task.
 
 GitHub Actions repeats the quality checks and production build for pushes and PRs.
 The deployment workflow publishes the checked `story-1` build to GitHub Pages.
-The final story PR stays open while its setup screen remains publicly available.
+The final story PR stays open while the story build remains publicly available.
 
 ## Precondition 1 self-check
 

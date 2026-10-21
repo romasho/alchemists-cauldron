@@ -1,5 +1,5 @@
 import './styles/style.css';
-import { renderSetupScreen } from './ui/setup-screen';
+import { mountGame } from './ui/game';
 
 const root = document.querySelector<HTMLDivElement>('#app');
 
@@ -7,4 +7,4 @@ if (root === null) {
   throw new Error('Application root #app is missing.');
 }
 
-renderSetupScreen(root);
+mountGame(root);
