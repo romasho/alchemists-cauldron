@@ -386,6 +386,30 @@ dialog h2 {
   gap: 0.6rem;
   margin-top: 1.5rem;
 }
+.difficulty-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+.difficulty-options button {
+  padding: 0.7rem 0.4rem;
+}
+.difficulty-options button[aria-pressed='true'] {
+  border-color: #d8bb7b;
+  background: #3d4d39;
+}
+.difficulty-options span {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.65rem;
+  line-height: 1.6;
+  color: #c7d1c2;
+}
+.continue {
+  width: 100%;
+  margin-block: 1rem;
+}
 .final-score {
   font-size: 3rem;
   color: #d6e5b7;
