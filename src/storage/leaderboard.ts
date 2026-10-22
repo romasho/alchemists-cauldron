@@ -1,3 +1,5 @@
+import type { Difficulty } from '../data/types.ts';
+
 export interface Entry {
   name: string;
   score: number;
@@ -29,19 +31,30 @@ export function rankEntries(entries: readonly Entry[]): Entry[] {
     .sort((a, b) => b.score - a.score || a.date - b.date)
     .slice(0, 10);
 }
-export function readLeaderboard(): Entry[] {
+function leaderboardKey(difficulty: Difficulty): string {
+  return difficulty === 'medium'
+    ? LEADERBOARD_KEY
+    : `${LEADERBOARD_KEY}-${difficulty}`;
+}
+export function readLeaderboard(difficulty: Difficulty = 'medium'): Entry[] {
   try {
     const value: unknown = JSON.parse(
-      localStorage.getItem(LEADERBOARD_KEY) ?? '[]',
+      localStorage.getItem(leaderboardKey(difficulty)) ?? '[]',
     );
     return Array.isArray(value) ? rankEntries(value.filter(isEntry)) : [];
   } catch {
     return [];
   }
 }
-export function writeLeaderboard(entries: readonly Entry[]): boolean {
+export function writeLeaderboard(
+  entries: readonly Entry[],
+  difficulty: Difficulty = 'medium',
+): boolean {
   try {
-    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(rankEntries(entries)));
+    localStorage.setItem(
+      leaderboardKey(difficulty),
+      JSON.stringify(rankEntries(entries)),
+    );
     return true;
   } catch {
     return false;

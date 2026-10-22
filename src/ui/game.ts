@@ -1,17 +1,18 @@
-import cauldronIcon from '../assets/cauldron.svg';
 import {
-  calculateCauldron,
-  formatTime,
-  PARAMETERS,
-  RULES,
-} from '../logic/brewing.ts';
+  DIFFICULTIES,
+  DIFFICULTY_SETTINGS,
+  isDifficulty,
+} from '../data/difficulty.ts';
+import { INGREDIENTS } from '../data/ingredients.ts';
+import { clearSave, loadGame, saveGame } from '../storage/save.ts';
+import cauldronIcon from '../assets/cauldron.svg';
+import { calculateCauldron, formatTime, PARAMETERS } from '../logic/brewing.ts';
 import {
   addIngredient,
   brew,
   createMenu,
   pauseGame,
   resumeGame,
-  SHELF,
   startGame,
   updateTime,
 } from '../state/game-state.ts';
@@ -23,7 +24,7 @@ import {
   validName,
   writeLeaderboard,
 } from '../storage/leaderboard.ts';
-import type { Parameter } from '../data/types.ts';
+import type { Difficulty, Parameter } from '../data/types.ts';
 
 const LABELS: Record<Parameter, string> = {
   temperature: 'Temperature',
@@ -35,20 +36,22 @@ const signed = (value: number): string =>
 
 export function mountGame(root: HTMLElement): void {
   let state = createMenu();
-  let entries = readLeaderboard();
+  let savedGame = loadGame();
+  let boardDifficulty: Difficulty = state.difficulty;
+  let entries = readLeaderboard(boardDifficulty);
   let saved = false;
   let endedAt = 0;
   let returnTo: 'menu' | 'game-over' = 'menu';
   let opener: HTMLElement | null = null;
   root.innerHTML = `
     <main class="workshop">
-      <header class="header"><div><p class="eyebrow">THE WORKSHOP · LEVEL 1</p><h1>Alchemist's Cauldron</h1></div>
+      <header class="header"><div><p class="eyebrow">THE WORKSHOP · LEVEL 2</p><h1>Alchemist's Cauldron</h1></div>
         <nav aria-label="Game controls"><button data-action="help">Help</button><button data-action="menu">Menu</button><button data-action="pause" disabled>Pause</button></nav></header>
       <section class="dashboard" aria-label="Run statistics"><div><span class="eyebrow">SCORE</span><strong id="score">0</strong></div><div class="timer"><span class="eyebrow">TIME REMAINING</span><strong id="time">00:00</strong><progress id="time-bar" max="150000" value="0" aria-label="Time remaining"></progress></div><div><span class="eyebrow">LIVES</span><strong id="lives" aria-label="0 lives">—</strong></div></section>
       <div class="playfield">
         <section class="panel shelf-panel"><div class="section-title"><h2>Ingredient shelf</h2><span>Click to add</span></div><div class="shelf"></div><p class="footnote">A little heat. A little magic. Every portion counts.</p></section>
-        <section class="panel cauldron-panel"><p class="eyebrow">THE MIXING ROOM</p><h2>Your cauldron</h2><div class="cauldron-art"><img src="${cauldronIcon}" width="180" height="180" alt="Alchemist’s cauldron"></div><ol class="mixture" aria-label="Added ingredients"></ol><p class="empty-mix">The cauldron is empty</p><button class="primary brew" data-action="brew" disabled>Brew potion</button><button class="primary start" data-action="start">Start Game</button></section>
-        <section class="panel recipe-panel"><p class="eyebrow">TODAY'S DISCOVERY</p><h2 id="recipe-name">A recipe awaits</h2><p class="recipe-copy">Bring all three parameters into balance.</p><p id="counter">Ingredients: 0 / 4</p><div class="bars"></div><p class="footnote">The shaded zones are recipe targets.<br>Brewing allows a tolerance of ±8.</p></section>
+        <section class="panel cauldron-panel"><p class="eyebrow">THE MIXING ROOM</p><h2>Your cauldron</h2><div class="cauldron-art"><img src="${cauldronIcon}" width="180" height="180" alt="Alchemist’s cauldron"></div><ol class="mixture" aria-label="Added ingredients"></ol><p class="empty-mix">The cauldron is empty</p><button class="primary brew" data-action="brew" disabled>Brew potion</button><button class="continue" data-action="continue" hidden>Continue Game</button><button class="primary start" data-action="start">Start Game</button></section>
+        <section class="panel recipe-panel"><p class="eyebrow">TODAY'S DISCOVERY</p><h2 id="recipe-name">A recipe awaits</h2><p class="recipe-copy">Bring all three parameters into balance.</p><p id="counter">Ingredients: 0 / 4</p><div class="bars"></div><p class="footnote" id="tolerance">The shaded zones are recipe targets.<br>Brewing allows a tolerance of ±8.</p></section>
       </div><p class="feedback" role="status"></p><footer>ALCHEMY IS THE ART OF FINDING BALANCE</footer>
     </main><dialog aria-labelledby="dialog-title"><div class="dialog-content"></div></dialog>`;
   // The selector determines the DOM subtype required by the caller.
@@ -62,7 +65,7 @@ export function mountGame(root: HTMLElement): void {
   const content = element('.dialog-content');
   const field = element('.playfield');
   const shelf = element('.shelf');
-  const cards = SHELF.map((ingredient, index) => {
+  const cards = INGREDIENTS.map((ingredient, index) => {
     const button = document.createElement('button');
     button.className = `ingredient ingredient-${String(index)}`;
     button.innerHTML = `<span class="stock"></span><span class="ingredient-icon" aria-hidden="true">${ingredient.icon}</span><span class="ingredient-name">${ingredient.name}</span><span class="ingredient-values">T ${signed(ingredient.temperature)} · D ${signed(ingredient.density)} · M ${signed(ingredient.magicPower)}</span>`;
@@ -102,6 +105,8 @@ export function mountGame(root: HTMLElement): void {
     opener?.focus();
   }
   function updateClock(): void {
+    element<HTMLProgressElement>('#time-bar').max =
+      DIFFICULTY_SETTINGS[state.difficulty].time;
     element('#score').textContent = String(state.score);
     element('#time').textContent = formatTime(state.timeLeft);
     element<HTMLProgressElement>('#time-bar').value = state.timeLeft;
@@ -117,14 +122,25 @@ export function mountGame(root: HTMLElement): void {
     );
   }
   function gameOver(): void {
-    const canSave = !saved && qualifies(entries, state.score);
+    const canSave =
+      !saved && qualifies(readLeaderboard(state.difficulty), state.score);
     showDialog(
       'Game Over',
       `<p>${state.reason}</p><p class="final-score">${String(state.score)} <small>points</small></p>${canSave ? '<form id="score-form"><label for="player-name">You made the Top-10! Your name</label><input id="player-name" name="name" minlength="2" maxlength="15" required autocomplete="nickname" aria-describedby="name-hint"><p id="name-hint" class="footnote">2–15 characters: letters, digits, spaces, _ or -.</p><button class="primary" type="submit">Save result</button><p id="save-message" role="status"></p></form>' : '<p>Your run is complete.</p>'}<div class="dialog-actions"><button class="primary" data-action="start">Play again</button><button data-action="leaderboard">Leaderboard</button><button data-action="exit">Exit to Menu</button></div>`,
     );
   }
   function render(): void {
+    if (state.status !== 'menu') {
+      saveGame(state);
+      savedGame = state.status === 'game-over' ? null : savedGame;
+    }
+    const rules = DIFFICULTY_SETTINGS[state.difficulty];
     updateClock();
+    element('.header .eyebrow').textContent =
+      `THE WORKSHOP · LEVEL 2 · ${rules.label.toUpperCase()}`;
+    element('#tolerance').textContent =
+      `The shaded zones are recipe targets. Brewing allows a tolerance of ±${String(rules.tolerance)}.`;
+    element('.continue').hidden = state.status !== 'menu' || !savedGame;
     const playing = state.status === 'playing';
     const menu = state.status === 'menu';
     field.classList.toggle('obscured', state.status === 'paused');
@@ -135,11 +151,12 @@ export function mountGame(root: HTMLElement): void {
     element('.brew').hidden = menu;
     element('.start').hidden = !menu;
     cards.forEach((card, index) => {
-      const ingredient = SHELF[index];
+      const ingredient = INGREDIENTS[index];
       if (!ingredient) return;
+      card.hidden = index >= rules.shelfSize;
       const stock = state.stock[ingredient.id] ?? 0;
       card.disabled =
-        !playing || stock === 0 || state.cauldron.length >= RULES.capacity;
+        !playing || stock === 0 || state.cauldron.length >= rules.capacity;
       card.classList.toggle('depleted', stock === 0);
       card.querySelector('.stock')?.replaceChildren(String(stock));
       card.setAttribute(
@@ -150,10 +167,10 @@ export function mountGame(root: HTMLElement): void {
     element('#recipe-name').textContent =
       state.recipe?.name ?? 'A recipe awaits';
     element('#counter').textContent =
-      `Ingredients: ${String(state.cauldron.length)} / ${String(RULES.capacity)}`;
+      `Ingredients: ${String(state.cauldron.length)} / ${String(rules.capacity)}`;
     element('#counter').classList.toggle(
       'full',
-      state.cauldron.length === RULES.capacity,
+      state.cauldron.length === rules.capacity,
     );
     element('.mixture').replaceChildren(
       ...state.cauldron.map((item) => {
@@ -164,15 +181,22 @@ export function mountGame(root: HTMLElement): void {
     );
     element('.empty-mix').hidden = state.cauldron.length > 0;
     const values = calculateCauldron(state.cauldron);
+    const limit = state.difficulty === 'hard' ? 250 : 160;
     bars.forEach(({ key, container, value, target, marker, range }) => {
       const zone = state.recipe?.[key];
+      container
+        .querySelector('.bar-scale > span:first-child')
+        ?.replaceChildren(String(-limit));
+      container
+        .querySelector('.bar-scale > span:last-child')
+        ?.replaceChildren(String(limit));
       if (value) value.textContent = String(values[key]);
       if (marker)
-        marker.style.left = `${String(((values[key] + 160) / 320) * 100)}%`;
+        marker.style.left = `${String(((values[key] + limit) / (limit * 2)) * 100)}%`;
       if (target) {
         target.hidden = !zone;
-        target.style.left = `${String((((zone?.min ?? 0) + 160) / 320) * 100)}%`;
-        target.style.width = `${String((((zone?.max ?? 0) - (zone?.min ?? 0)) / 320) * 100)}%`;
+        target.style.left = `${String((((zone?.min ?? 0) + limit) / (limit * 2)) * 100)}%`;
+        target.style.width = `${String((((zone?.max ?? 0) - (zone?.min ?? 0)) / (limit * 2)) * 100)}%`;
       }
       if (range)
         range.textContent = zone
@@ -189,6 +213,33 @@ export function mountGame(root: HTMLElement): void {
       gameOver();
     }
   }
+  function difficultyButtons(
+    action: 'difficulty' | 'board',
+    selected: Difficulty,
+  ): string {
+    return (
+      '<div class="difficulty-options" role="group" aria-label="Difficulty">' +
+      DIFFICULTIES.map((difficulty) => {
+        const rules = DIFFICULTY_SETTINGS[difficulty];
+        const summary =
+          action === 'difficulty'
+            ? `<span>${String(rules.shelfSize)} ingredients · max ${String(rules.capacity)} portions<br>${String(rules.time / 1000)}s · ${String(rules.lives)} lives · ±${String(rules.tolerance)}<br>+${String(rules.score)} points · +${String(rules.bonus / 1000)}s per brew</span>`
+            : '';
+        return `<button data-action="${action}" data-difficulty="${difficulty}" aria-pressed="${String(difficulty === selected)}">${rules.label}${summary}</button>`;
+      }).join('') +
+      '</div>'
+    );
+  }
+  function showMenu(): void {
+    showDialog(
+      'Workshop menu',
+      `<p>Choose your difficulty before starting a new game.</p>${difficultyButtons('difficulty', state.difficulty)}<div class="dialog-actions">${savedGame ? '<button data-action="continue">Continue Game</button>' : ''}<button class="primary" data-action="start">Start new game</button><button data-action="leaderboard">Leaderboard</button><button data-action="close">Back</button></div>`,
+    );
+  }
+  function helpText(): string {
+    const rules = DIFFICULTY_SETTINGS[state.difficulty];
+    return `<p>${rules.label}: add up to ${String(rules.capacity)} portions from the shelf. Temperature (T), Density (D) and Magic Power (M) are added together, including negative values.</p><p>Match all three recipe ranges with ±${String(rules.tolerance)} tolerance, then Brew. Success earns ${String(rules.score)} points and ${String(rules.bonus / 1000)} seconds, capped at ${String(rules.time / 1000)} seconds. Failure costs one life. Every portion is spent.</p><p>You start with ${String(rules.time / 1000)} seconds and ${String(rules.lives)} lives. The run ends when time, lives or all ingredients run out. Leaving the tab pauses the game.</p><p>Choose Easy, Medium or Hard in Menu before starting. Unfinished games save automatically; Continue Game restores them on pause. Exit to Menu clears the save.</p><button data-action="close">Back to workshop</button>`;
+  }
   function showPause(): void {
     showDialog(
       'A moment of stillness',
@@ -196,9 +247,10 @@ export function mountGame(root: HTMLElement): void {
     );
   }
   function showLeaderboard(): void {
+    entries = readLeaderboard(boardDifficulty);
     showDialog(
       'The alchemists’ Top-10',
-      '<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Score</th><th>Date</th></tr></thead><tbody></tbody></table></div><p class="board-message" role="status"></p><div class="dialog-actions"><button data-action="back">Back</button><button data-action="clear">Clear Leaderboard</button></div>',
+      `${difficultyButtons('board', boardDifficulty)}<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Score</th><th>Difficulty</th><th>Date</th></tr></thead><tbody></tbody></table></div><p class="board-message" role="status"></p><div class="dialog-actions"><button data-action="back">Back</button><button data-action="clear">Clear Leaderboard</button></div>`,
     );
     const tbody = element('tbody');
     entries.forEach((entry, index) => {
@@ -207,6 +259,7 @@ export function mountGame(root: HTMLElement): void {
         String(index + 1),
         entry.name,
         String(entry.score),
+        DIFFICULTY_SETTINGS[boardDifficulty].label,
         formatDate(entry.date),
       ].forEach((text) => {
         const cell = document.createElement('td');
@@ -226,8 +279,38 @@ export function mountGame(root: HTMLElement): void {
         : null;
     if (!button || button.disabled) return;
     switch (button.dataset['action']) {
+      case 'difficulty': {
+        const difficulty = button.dataset['difficulty'];
+        if (state.status !== 'menu' || !isDifficulty(difficulty)) break;
+        state = createMenu(difficulty);
+        render();
+        showMenu();
+        content
+          .querySelector<HTMLElement>(`[data-difficulty="${difficulty}"]`)
+          ?.focus();
+        break;
+      }
+      case 'board': {
+        const difficulty = button.dataset['difficulty'];
+        if (!isDifficulty(difficulty)) break;
+        boardDifficulty = difficulty;
+        showLeaderboard();
+        content
+          .querySelector<HTMLElement>(`[data-difficulty="${difficulty}"]`)
+          ?.focus();
+        break;
+      }
+      case 'continue':
+        if (state.status !== 'menu' || !savedGame) break;
+        state = savedGame;
+        savedGame = null;
+        saved = false;
+        render();
+        showPause();
+        break;
       case 'start':
-        state = startGame();
+        state = startGame(Date.now(), Math.random, state.difficulty);
+        savedGame = null;
         saved = false;
         closeDialog();
         render();
@@ -247,7 +330,9 @@ export function mountGame(root: HTMLElement): void {
         render();
         break;
       case 'exit':
-        state = createMenu();
+        clearSave();
+        savedGame = null;
+        state = createMenu(state.difficulty);
         closeDialog();
         render();
         break;
@@ -260,10 +345,7 @@ export function mountGame(root: HTMLElement): void {
           gameOver();
           break;
         }
-        showDialog(
-          'The art of brewing',
-          '<p>Add up to 4 portions from the shelf. Their Temperature (T), Density (D) and Magic Power (M) are added together, including negative values.</p><p>Match all three recipe ranges with ±8 tolerance, then Brew. Success earns 200 points and 10 seconds, capped at 150 seconds. Failure costs one life. Every portion is spent.</p><p>You have 150 seconds and 3 lives. The run ends when time, lives or all ingredients run out. Pause also happens when you leave the tab.</p><button data-action="close">Back to workshop</button>',
-        );
+        showDialog('The art of brewing', helpText());
         break;
       case 'menu':
         if (state.status === 'playing') {
@@ -278,34 +360,32 @@ export function mountGame(root: HTMLElement): void {
           showPause();
           break;
         }
-        showDialog(
-          'Workshop menu',
-          '<p>Level 1 · Medium rules</p><div class="dialog-actions"><button class="primary" data-action="start">Start new game</button><button data-action="leaderboard">Leaderboard</button><button data-action="close">Back</button></div>',
-        );
+        showMenu();
         break;
       case 'close':
         if (state.status === 'paused') showPause();
         else closeDialog();
         break;
       case 'leaderboard':
+        boardDifficulty = state.difficulty;
         returnTo = state.status === 'game-over' ? 'game-over' : 'menu';
         showLeaderboard();
         break;
       case 'back':
         if (returnTo === 'game-over') gameOver();
-        else closeDialog();
+        else showMenu();
         break;
       case 'clear':
         showDialog(
           'Clear Leaderboard?',
-          '<p>This removes all saved results from this browser.</p><div class="dialog-actions"><button data-action="confirm-clear">Clear all results</button><button data-action="cancel-clear">Cancel</button></div>',
+          '<p>This removes the results for the selected difficulty from this browser.</p><div class="dialog-actions"><button data-action="confirm-clear">Clear these results</button><button data-action="cancel-clear">Cancel</button></div>',
         );
         break;
       case 'cancel-clear':
         showLeaderboard();
         break;
       case 'confirm-clear':
-        if (writeLeaderboard([])) {
+        if (writeLeaderboard([], boardDifficulty)) {
           entries = [];
           showLeaderboard();
         } else {
@@ -332,10 +412,10 @@ export function mountGame(root: HTMLElement): void {
       return;
     }
     const next = rankEntries([
-      ...entries,
+      ...readLeaderboard(state.difficulty),
       { name, score: state.score, date: endedAt },
     ]);
-    if (writeLeaderboard(next)) {
+    if (writeLeaderboard(next, state.difficulty)) {
       entries = next;
       saved = true;
       gameOver();
@@ -356,6 +436,16 @@ export function mountGame(root: HTMLElement): void {
     } else if (state.status === 'game-over') gameOver();
     else closeDialog();
   });
+  window.addEventListener('pagehide', () => {
+    if (state.status === 'playing') pauseGame(state);
+    if (state.status !== 'menu') saveGame(state);
+  });
+  window.addEventListener('pageshow', () => {
+    if (state.status === 'paused') {
+      render();
+      showPause();
+    }
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && state.status === 'playing') {
       handlePause();
@@ -370,7 +460,8 @@ export function mountGame(root: HTMLElement): void {
     if (state.status !== 'playing') return;
     updateTime(state);
     updateClock();
+    saveGame(state);
     if (state.timeLeft === 0) render();
-  }, 100);
+  }, 1000);
   render();
 }
