@@ -14,6 +14,7 @@ import { test } from 'node:test';
 import { INGREDIENTS } from '../src/data/ingredients.ts';
 import { RECIPES } from '../src/data/recipes.ts';
 import { parameterStatus } from '../src/ui/parameter-status.ts';
+import { recordResult } from '../src/storage/leaderboard.ts';
 import {
   calculateCauldron,
   checkBrew,
@@ -369,4 +370,50 @@ void test('save storage tolerates corruption and keeps difficulty leaderboards i
     assert.equal(readLeaderboard(difficulty)[0]?.name, difficulty);
   assert.equal(clearSave(), true);
   Reflect.deleteProperty(globalThis, 'localStorage');
+});
+void test('saving a result preserves newer records and rechecks Top-10 qualification', () => {
+  const data = new Map<string, string>();
+  const previousStorage = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'localStorage',
+  );
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+    },
+  });
+  try {
+    const alice = { name: 'Alice', score: 300, date: 1 };
+    const bob = { name: 'Bob', score: 600, date: 2 };
+    writeLeaderboard([alice], 'hard');
+    const earlierSnapshot = readLeaderboard('hard');
+    writeLeaderboard([...earlierSnapshot, bob], 'hard');
+    assert.equal(
+      recordResult({ name: 'Carol', score: 900, date: 3 }, 'hard'),
+      'saved',
+    );
+    assert.deepEqual(
+      readLeaderboard('hard').map((entry) => entry.name),
+      ['Carol', 'Bob', 'Alice'],
+    );
+    assert.deepEqual(earlierSnapshot, [alice]);
+
+    const strongerResults = Array.from({ length: 10 }, (_, index) => ({
+      name: `Player-${String(index)}`,
+      score: 1200,
+      date: index + 4,
+    }));
+    writeLeaderboard(strongerResults, 'hard');
+    assert.equal(
+      recordResult({ name: 'Late', score: 900, date: 20 }, 'hard'),
+      'not-qualified',
+    );
+    assert.deepEqual(readLeaderboard('hard'), strongerResults);
+  } finally {
+    if (previousStorage)
+      Object.defineProperty(globalThis, 'localStorage', previousStorage);
+    else Reflect.deleteProperty(globalThis, 'localStorage');
+  }
 });

@@ -61,6 +61,16 @@ export function writeLeaderboard(
 export function qualifies(entries: readonly Entry[], score: number): boolean {
   return entries.length < 10 || score > (entries.at(-1)?.score ?? 0);
 }
+export function recordResult(
+  entry: Entry,
+  difficulty: Difficulty,
+): 'saved' | 'not-qualified' | 'unavailable' {
+  const current = readLeaderboard(difficulty);
+  if (!qualifies(current, entry.score)) return 'not-qualified';
+  return writeLeaderboard([...current, entry], difficulty)
+    ? 'saved'
+    : 'unavailable';
+}
 export function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
   const pad = (value: number): string => String(value).padStart(2, '0');

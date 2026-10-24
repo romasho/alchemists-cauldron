@@ -25,7 +25,7 @@ import {
 import {
   formatDate,
   qualifies,
-  rankEntries,
+  recordResult,
   readLeaderboard,
   validName,
   writeLeaderboard,
@@ -197,6 +197,7 @@ export function mountGame(
     );
   }
   function gameOver(): void {
+    entries = readLeaderboard(state.difficulty);
     const canSave = !saved && qualifies(entries, state.score);
     showDialog(
       'Game Over',
@@ -405,9 +406,6 @@ export function mountGame(
     element('.workshop').dataset['status'] = state.status;
     element('.workshop').dataset['difficulty'] = state.difficulty;
     element<HTMLProgressElement>('#time-bar').max = rules().time;
-    element('.difficulty-label').textContent = state.difficulty.toUpperCase();
-    element('footer').textContent =
-      `${String(rules().shelfSize)} INGREDIENTS · ${String(rules().capacity)} PORTIONS · ${state.difficulty.toUpperCase()}`;
     element('.workshop').classList.toggle('shake', reaction === 'error');
     if (state.status !== 'playing') hideTooltips();
     const playing = state.status === 'playing';
@@ -419,24 +417,27 @@ export function mountGame(
     element<HTMLButtonElement>('.brew').disabled =
       !playing || !state.cauldron.length;
     element('.brew').hidden = menu;
-    element('.start').hidden = !menu;
-    element('.continue').hidden = !menu || !savedGame;
+    const startButton = element<HTMLButtonElement>('.start');
+    const canContinue = menu && Boolean(savedGame);
+    startButton.hidden = !menu;
+    startButton.textContent = canContinue ? 'Continue Game' : 'Start Game';
+    startButton.dataset['action'] = canContinue ? 'continue' : 'start';
     element('.pour').hidden = menu;
     element<HTMLButtonElement>('.pour').disabled =
       !playing || !state.cauldron.length;
     root.querySelectorAll('.tolerance-value').forEach((label) => {
       label.textContent = `±${String(rules().tolerance)}`;
     });
-    element('.brew-hint').textContent = menu
-      ? `${String(rules().time / 1000)} seconds · ${String(rules().lives)} lives · ±${String(rules().tolerance)} tolerance`
-      : state.cauldron.length
-        ? `Brew ${String(state.cauldron.length)} of ${String(rules().capacity)} possible portions.`
-        : 'Add at least one portion to brew.';
+    element('.brew-hint').hidden = menu || !state.cauldron.length;
+    element('.brew-hint').textContent = state.cauldron.length
+      ? `Brew ${String(state.cauldron.length)} of ${String(rules().capacity)} possible portions.`
+      : '';
     renderShelf();
     renderRecipe();
     renderCauldron();
     renderParameters();
-    element('.feedback').textContent = state.message;
+    element('.feedback').hidden = menu;
+    element('.feedback').textContent = menu ? '' : state.message;
     if (persist && (state.status === 'playing' || state.status === 'paused'))
       saveGame(state);
     if (persist && state.status === 'game-over') {
@@ -455,6 +456,7 @@ export function mountGame(
     );
   }
   function showLeaderboard(): void {
+    entries = readLeaderboard(state.difficulty);
     showDialog(
       'The alchemists’ Top-10',
       '<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Name</th><th>Difficulty</th><th>Score</th><th>Date</th></tr></thead><tbody></tbody></table></div><p class="board-message" role="status"></p><div class="dialog-actions"><button data-action="back">Back</button><button data-action="clear">Clear Leaderboard</button></div>',
@@ -545,6 +547,11 @@ export function mountGame(
           pauseGame(state);
           render();
         }
+        if (state.status === 'game-over') {
+          resumeAfterDetails = false;
+          gameOver();
+          break;
+        }
         showDialog(
           ingredient.name,
           ingredientDetails(ingredient, state.stock[ingredient.id] ?? 0),
@@ -552,6 +559,11 @@ export function mountGame(
         break;
       }
       case 'detail-close':
+        if (state.status === 'game-over') {
+          resumeAfterDetails = false;
+          gameOver();
+          break;
+        }
         if (resumeAfterDetails && state.status === 'paused') resumeGame(state);
         resumeAfterDetails = false;
         render();
@@ -704,13 +716,14 @@ export function mountGame(
       input.reportValidity();
       return;
     }
-    const next = rankEntries([
-      ...entries,
+    const result = recordResult(
       { name, score: state.score, date: endedAt },
-    ]);
-    if (writeLeaderboard(next, state.difficulty)) {
-      entries = next;
+      state.difficulty,
+    );
+    if (result === 'saved') {
       saved = true;
+      gameOver();
+    } else if (result === 'not-qualified') {
       gameOver();
     } else
       element('#save-message').textContent =

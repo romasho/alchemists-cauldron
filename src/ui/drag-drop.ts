@@ -29,17 +29,26 @@ export function bindDragDrop(
     const image = card.querySelector<HTMLImageElement>('.ingredient-art');
     if (image) {
       dragPreview?.remove();
-      const { width, height } = image.getBoundingClientRect();
+      const { left, top, width, height } = image.getBoundingClientRect();
       dragPreview = document.createElement('div');
       dragPreview.className = 'ingredient-drag-preview';
       dragPreview.setAttribute('aria-hidden', 'true');
+      dragPreview.style.left = `${String(left)}px`;
+      dragPreview.style.top = `${String(top)}px`;
       dragPreview.style.width = `${String(width)}px`;
       dragPreview.style.height = `${String(height)}px`;
       const icon = image.cloneNode() as HTMLImageElement;
       icon.removeAttribute('class');
       dragPreview.append(icon);
       document.body.append(dragPreview);
+      // Chrome needs the preview inside the viewport when it captures the drag image.
+      dragPreview.getBoundingClientRect();
       event.dataTransfer.setDragImage(dragPreview, width / 2, height / 2);
+      const capturedPreview = dragPreview;
+      requestAnimationFrame(() => {
+        capturedPreview.remove();
+        if (dragPreview === capturedPreview) dragPreview = null;
+      });
     }
   });
   zone.addEventListener('dragover', (event) => {

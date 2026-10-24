@@ -57,7 +57,7 @@ export function startGame(
     lives: rules.lives,
     recipe: pickRecipe(random, difficulty),
     stock: createStock(getShelf(difficulty), random),
-    message: 'Choose your ingredients. Find the balance.',
+    message: '',
   };
 }
 export function updateTime(state: GameState, now = Date.now()): void {
