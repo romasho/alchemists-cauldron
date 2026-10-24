@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { INGREDIENTS } from '../src/data/ingredients.ts';
 import { RECIPES } from '../src/data/recipes.ts';
 import { DIFFICULTIES, DIFFICULTY_SETTINGS } from '../src/data/difficulty.ts';
+import { getReactions } from '../src/data/reactions.ts';
 import {
   clearSave,
   loadGame,
@@ -19,6 +20,7 @@ import {
   addIngredient,
   brew,
   pauseGame,
+  pourOut,
   resumeGame,
   SHELF,
   startGame,
@@ -77,14 +79,14 @@ void test('capacity, ordered additions, depletion and invalid ids are guarded', 
 void test('successful brew spends stock, scores and caps time; empty brew does nothing', () => {
   const state = startGame(1000, () => 0);
   addIngredient(state, 'fairy', 1000);
-  addIngredient(state, 'acid', 1000);
+  addIngredient(state, 'fairy', 1000);
   assert.ok(state.recipe);
   assert.equal(checkBrew(state.cauldron, state.recipe), true);
   brew(state, 2000, () => 0.5);
   assert.equal(state.score, 200);
   assert.equal(state.timeLeft, RULES.time);
-  assert.equal(state.stock['fairy'], 1);
-  assert.equal(state.stock['acid'], 1);
+  assert.equal(state.stock['fairy'], 0);
+  assert.equal(state.stock['acid'], 2);
   assert.equal(state.cauldron.length, 0);
   brew(state, 2000);
   assert.equal(state.score, 200);
@@ -233,7 +235,7 @@ void test('each difficulty sets stock, limits, recipe pool, tolerance and reward
       difficulty === 'easy'
         ? 'dragon'
         : difficulty === 'medium'
-          ? 'acid'
+          ? 'fairy'
           : 'fairy',
       0,
     );
@@ -405,6 +407,138 @@ void test('leaderboards keep separate Top-10 lists and clearing affects only one
     assert.deepEqual(readLeaderboard('hard'), []);
     assert.equal(readLeaderboard('easy').length, 10);
     assert.equal(readLeaderboard('medium').length, 10);
+  } finally {
+    Reflect.deleteProperty(globalThis, 'localStorage');
+  }
+});
+
+void test('difficulty enables 0/2/3 reactions and recomputes current values without stacking', () => {
+  assert.deepEqual(
+    DIFFICULTIES.map((difficulty) => getReactions(difficulty).length),
+    [0, 2, 3],
+  );
+  const state = startGame(0, () => 0.5);
+  addIngredient(state, 'fairy', 0);
+  addIngredient(state, 'acid', 0);
+  assert.equal(state.timeLeft, 140_000);
+  assert.deepEqual(calculateCauldron(state.cauldron, 'medium'), {
+    temperature: 22,
+    density: 23,
+    magicPower: 51,
+  });
+  addIngredient(state, 'fairy', 0);
+  assert.equal(state.timeLeft, 140_000);
+  assert.equal(calculateCauldron(state.cauldron, 'medium').magicPower, 69);
+  assert.equal(calculateCauldron(state.cauldron, 'medium').magicPower, 69);
+  assert.equal(calculateCauldron(state.cauldron, 'easy').magicPower, 46);
+  pourOut(state, 0);
+  addIngredient(state, 'acid', 0);
+  addIngredient(state, 'fairy', 0);
+  assert.equal(state.timeLeft, 120_000);
+});
+
+void test('solar frost and overlapping reactions use raw ingredient sums for each calculation', () => {
+  const state = startGame(0, () => 0.5);
+  for (const id of ['dragon', 'frost', 'fairy', 'acid'])
+    addIngredient(state, id, 0);
+  assert.deepEqual(calculateCauldron(state.cauldron, 'medium'), {
+    temperature: 0,
+    density: 42,
+    magicPower: 87,
+  });
+  const values = calculateCauldron(state.cauldron, 'medium');
+  assert.ok(state.recipe);
+  state.recipe = {
+    ...state.recipe,
+    temperature: { min: values.temperature, max: values.temperature },
+    density: { min: values.density, max: values.density },
+    magicPower: { min: values.magicPower, max: values.magicPower },
+  };
+  brew(state, 0);
+  assert.equal(state.score, 200);
+  assert.equal(state.effect, 'success');
+});
+
+void test('volatile mix clears spent portions and can end the game on last life', () => {
+  const state = startGame(0, () => 0.5, 'hard');
+  state.lives = 1;
+  addIngredient(state, 'phoenix', 0);
+  addIngredient(state, 'void', 0);
+  assert.equal(state.lives, 0);
+  assert.equal(state.cauldron.length, 0);
+  assert.equal(state.stock['phoenix'], 8);
+  assert.equal(state.status, 'game-over');
+  assert.equal(state.reason, 'No lives left');
+  assert.equal(state.effect, 'failure');
+});
+
+void test('pour out costs exactly 10 seconds, preserves recipe/score/lives and respects state guards', () => {
+  const state = startGame(0, () => 0.5);
+  const recipe = state.recipe;
+  pourOut(state, 0);
+  assert.equal(state.timeLeft, 150_000);
+  addIngredient(state, 'dragon', 0);
+  const stock = { ...state.stock };
+  pauseGame(state, 0);
+  pourOut(state, 0);
+  assert.equal(state.cauldron.length, 1);
+  resumeGame(state, 0);
+  pourOut(state, 1000);
+  assert.equal(state.timeLeft, 139_000);
+  assert.equal(state.endTime, 140_000);
+  assert.equal(state.cauldron.length, 0);
+  assert.equal(state.lives, 3);
+  assert.equal(state.score, 0);
+  assert.equal(state.recipe, recipe);
+  assert.deepEqual(state.stock, stock);
+  addIngredient(state, 'dragon', 1000);
+  pourOut(state, 135_000);
+  assert.equal(state.timeLeft, 0);
+  assert.equal(state.reason, 'Time is up');
+});
+
+void test('reaction timeout and pouring the last stock end the run immediately', () => {
+  const state = startGame(0, () => 0.5);
+  addIngredient(state, 'acid', 0);
+  addIngredient(state, 'fairy', 145_000);
+  assert.equal(state.timeLeft, 0);
+  assert.equal(state.status, 'game-over');
+  const last = startGame(0, () => 0.5);
+  last.stock = Object.fromEntries(SHELF.map((item) => [item.id, 0]));
+  last.stock['dragon'] = 1;
+  addIngredient(last, 'dragon', 0);
+  pourOut(last, 0);
+  assert.equal(last.reason, 'Out of ingredients');
+});
+
+void test('saved active reactions restore values and never charge their penalty twice', () => {
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+    },
+  });
+  try {
+    const state = startGame(0, () => 0.5);
+    addIngredient(state, 'fairy', 0);
+    addIngredient(state, 'acid', 0);
+    assert.ok(saveGame(state));
+    const restored = loadGame();
+    assert.ok(restored);
+    assert.equal(
+      calculateCauldron(restored.cauldron, restored.difficulty).magicPower,
+      51,
+    );
+    resumeGame(restored, 1000);
+    addIngredient(restored, 'fairy', 1000);
+    assert.equal(restored.timeLeft, 140_000);
+    assert.equal(
+      calculateCauldron(restored.cauldron, restored.difficulty).magicPower,
+      69,
+    );
   } finally {
     Reflect.deleteProperty(globalThis, 'localStorage');
   }

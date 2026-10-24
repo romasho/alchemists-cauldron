@@ -4,6 +4,8 @@ import {
   isDifficulty,
 } from '../data/difficulty.ts';
 import { INGREDIENTS } from '../data/ingredients.ts';
+import { getReactions } from '../data/reactions.ts';
+import { createTooltip, signed } from './tooltip.ts';
 import { clearSave, loadGame, saveGame } from '../storage/save.ts';
 import cauldronIcon from '../assets/cauldron.svg';
 import { calculateCauldron, formatTime, PARAMETERS } from '../logic/brewing.ts';
@@ -12,6 +14,7 @@ import {
   brew,
   createMenu,
   pauseGame,
+  pourOut,
   resumeGame,
   startGame,
   updateTime,
@@ -31,8 +34,6 @@ const LABELS: Record<Parameter, string> = {
   density: 'Density',
   magicPower: 'Magic Power',
 };
-const signed = (value: number): string =>
-  value > 0 ? `+${String(value)}` : String(value);
 
 export function mountGame(root: HTMLElement): void {
   let state = createMenu();
@@ -45,11 +46,11 @@ export function mountGame(root: HTMLElement): void {
   let opener: HTMLElement | null = null;
   root.innerHTML = `
     <main class="workshop">
-      <header class="header"><div><p class="eyebrow">THE WORKSHOP · LEVEL 2</p><h1>Alchemist's Cauldron</h1></div>
+      <header class="header"><div><p class="eyebrow">THE WORKSHOP · LEVEL 3</p><h1>Alchemist's Cauldron</h1></div>
         <nav aria-label="Game controls"><button data-action="help">Help</button><button data-action="menu">Menu</button><button data-action="pause" disabled>Pause</button></nav></header>
       <section class="dashboard" aria-label="Run statistics"><div><span class="eyebrow">SCORE</span><strong id="score">0</strong></div><div class="timer"><span class="eyebrow">TIME REMAINING</span><strong id="time">00:00</strong><progress id="time-bar" max="150000" value="0" aria-label="Time remaining"></progress></div><div><span class="eyebrow">LIVES</span><strong id="lives" aria-label="0 lives">—</strong></div></section>
       <div class="playfield">
-        <section class="panel shelf-panel"><div class="section-title"><h2>Ingredient shelf</h2><span>Click to add</span></div><div class="shelf"></div><p class="footnote">A little heat. A little magic. Every portion counts.</p></section>
+        <section class="panel shelf-panel"><div class="section-title"><h2>Ingredient shelf</h2><span>Click or drag to add</span></div><div class="shelf"></div><p class="footnote">Hover or focus for values. Keys 1–8 add ingredients.</p></section>
         <section class="panel cauldron-panel"><p class="eyebrow">THE MIXING ROOM</p><h2>Your cauldron</h2><div class="cauldron-art"><img src="${cauldronIcon}" width="180" height="180" alt="Alchemist’s cauldron"></div><ol class="mixture" aria-label="Added ingredients"></ol><p class="empty-mix">The cauldron is empty</p><button class="primary brew" data-action="brew" disabled>Brew potion</button><button class="continue" data-action="continue" hidden>Continue Game</button><button class="primary start" data-action="start">Start Game</button></section>
         <section class="panel recipe-panel"><p class="eyebrow">TODAY'S DISCOVERY</p><h2 id="recipe-name">A recipe awaits</h2><p class="recipe-copy">Bring all three parameters into balance.</p><p id="counter">Ingredients: 0 / 4</p><div class="bars"></div><p class="footnote" id="tolerance">The shaded zones are recipe targets.<br>Brewing allows a tolerance of ±8.</p></section>
       </div><p class="feedback" role="status"></p><footer>ALCHEMY IS THE ART OF FINDING BALANCE</footer>
@@ -65,16 +66,100 @@ export function mountGame(root: HTMLElement): void {
   const content = element('.dialog-content');
   const field = element('.playfield');
   const shelf = element('.shelf');
+  const tooltip = createTooltip(root);
+  const dropZone = element('.cauldron-art');
+  dropZone.insertAdjacentHTML(
+    'beforeend',
+    '<div class="floating-ingredients" aria-hidden="true"></div><span class="brew-effect" aria-hidden="true"></span>',
+  );
+  element('.brew').insertAdjacentHTML(
+    'afterend',
+    '<button class="pour" data-action="pour" disabled>Pour Out (−10s)</button>',
+  );
+  element('.recipe-panel').insertAdjacentHTML(
+    'beforeend',
+    '<p class="footnote reactions"></p>',
+  );
+  let draggedId: string | null = null;
+  function canAddIngredient(id: string): boolean {
+    return (
+      state.status === 'playing' &&
+      !dialog.open &&
+      (state.stock[id] ?? 0) > 0 &&
+      state.cauldron.length < DIFFICULTY_SETTINGS[state.difficulty].capacity
+    );
+  }
+  function clearDrag(): void {
+    draggedId = null;
+    dropZone.classList.remove('drop-active');
+    cards.forEach((card) => {
+      card.classList.remove('dragging');
+    });
+  }
+  function canDrop(): boolean {
+    return draggedId !== null && canAddIngredient(draggedId);
+  }
+  function add(id: string): void {
+    if (!canAddIngredient(id)) return;
+    tooltip.hide();
+    addIngredient(state, id);
+    render();
+  }
   const cards = INGREDIENTS.map((ingredient, index) => {
     const button = document.createElement('button');
     button.className = `ingredient ingredient-${String(index)}`;
-    button.innerHTML = `<span class="stock"></span><span class="ingredient-icon" aria-hidden="true">${ingredient.icon}</span><span class="ingredient-name">${ingredient.name}</span><span class="ingredient-values">T ${signed(ingredient.temperature)} · D ${signed(ingredient.density)} · M ${signed(ingredient.magicPower)}</span>`;
+    button.innerHTML = `<span class="stock"></span><span class="ingredient-icon" aria-hidden="true">${ingredient.icon}</span><span class="ingredient-name">${ingredient.name}</span>`;
     button.addEventListener('click', () => {
-      addIngredient(state, ingredient.id);
-      render();
+      add(ingredient.id);
     });
+    const showTooltip = (): void => {
+      if (state.status === 'playing' && !dialog.open && !draggedId)
+        tooltip.show(button, ingredient);
+    };
+    button.addEventListener('mouseenter', showTooltip);
+    button.addEventListener('focus', () => {
+      // Focus can scroll the card into view before the next frame.
+      requestAnimationFrame(() => {
+        if (document.activeElement === button) showTooltip();
+      });
+    });
+    button.addEventListener('mouseleave', tooltip.hide);
+    button.addEventListener('blur', tooltip.hide);
+    button.addEventListener('dragstart', (event) => {
+      if (!canAddIngredient(ingredient.id) || !event.dataTransfer) {
+        event.preventDefault();
+        return;
+      }
+      tooltip.hide();
+      draggedId = ingredient.id;
+      event.dataTransfer.setData('text/plain', ingredient.id);
+      event.dataTransfer.effectAllowed = 'copy';
+      button.classList.add('dragging');
+    });
+    button.addEventListener('dragend', clearDrag);
     shelf.append(button);
     return button;
+  });
+  dropZone.addEventListener('dragover', (event) => {
+    if (!canDrop()) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    dropZone.classList.add('drop-active');
+  });
+  dropZone.addEventListener('dragleave', (event) => {
+    if (
+      event.relatedTarget instanceof Node &&
+      dropZone.contains(event.relatedTarget)
+    )
+      return;
+    dropZone.classList.remove('drop-active');
+  });
+  dropZone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    const id = event.dataTransfer?.getData('text/plain');
+    const valid = canDrop() && id === draggedId;
+    clearDrag();
+    if (valid && id) add(id);
   });
   const bars = PARAMETERS.map((key) => {
     const container = document.createElement('div');
@@ -91,6 +176,8 @@ export function mountGame(root: HTMLElement): void {
     };
   });
   function showDialog(title: string, body: string): void {
+    tooltip.hide();
+    clearDrag();
     if (!dialog.open)
       opener =
         document.activeElement instanceof HTMLElement
@@ -129,7 +216,20 @@ export function mountGame(root: HTMLElement): void {
       `<p>${state.reason}</p><p class="final-score">${String(state.score)} <small>points</small></p>${canSave ? '<form id="score-form"><label for="player-name">You made the Top-10! Your name</label><input id="player-name" name="name" minlength="2" maxlength="15" required autocomplete="nickname" aria-describedby="name-hint"><p id="name-hint" class="footnote">2–15 characters: letters, digits, spaces, _ or -.</p><button class="primary" type="submit">Save result</button><p id="save-message" role="status"></p></form>' : '<p>Your run is complete.</p>'}<div class="dialog-actions"><button class="primary" data-action="start">Play again</button><button data-action="leaderboard">Leaderboard</button><button data-action="exit">Exit to Menu</button></div>`,
     );
   }
+  function resetEffects(): void {
+    element('.workshop').classList.remove(
+      'effect-success',
+      'effect-failure',
+      'effect-reaction',
+      'effect-pour',
+    );
+    element('.brew-effect').textContent = '';
+  }
   function render(): void {
+    if (state.status !== 'playing') {
+      tooltip.hide();
+      clearDrag();
+    }
     if (state.status !== 'menu') {
       saveGame(state);
       savedGame = state.status === 'game-over' ? null : savedGame;
@@ -137,7 +237,7 @@ export function mountGame(root: HTMLElement): void {
     const rules = DIFFICULTY_SETTINGS[state.difficulty];
     updateClock();
     element('.header .eyebrow').textContent =
-      `THE WORKSHOP · LEVEL 2 · ${rules.label.toUpperCase()}`;
+      `THE WORKSHOP · LEVEL 3 · ${rules.label.toUpperCase()}`;
     element('#tolerance').textContent =
       `The shaded zones are recipe targets. Brewing allows a tolerance of ±${String(rules.tolerance)}.`;
     element('.continue').hidden = state.status !== 'menu' || !savedGame;
@@ -149,14 +249,22 @@ export function mountGame(root: HTMLElement): void {
     element<HTMLButtonElement>('.brew').disabled =
       !playing || !state.cauldron.length;
     element('.brew').hidden = menu;
+    element<HTMLButtonElement>('.pour').disabled =
+      !playing || !state.cauldron.length;
+    element('.pour').hidden = menu;
     element('.start').hidden = !menu;
     cards.forEach((card, index) => {
       const ingredient = INGREDIENTS[index];
       if (!ingredient) return;
       card.hidden = index >= rules.shelfSize;
       const stock = state.stock[ingredient.id] ?? 0;
-      card.disabled =
-        !playing || stock === 0 || state.cauldron.length >= rules.capacity;
+      // Keep unavailable ingredients focusable during play for their tooltips.
+      card.disabled = !playing;
+      card.setAttribute(
+        'aria-disabled',
+        String(!canAddIngredient(ingredient.id)),
+      );
+      card.draggable = canAddIngredient(ingredient.id);
       card.classList.toggle('depleted', stock === 0);
       card.querySelector('.stock')?.replaceChildren(String(stock));
       card.setAttribute(
@@ -180,7 +288,35 @@ export function mountGame(root: HTMLElement): void {
       }),
     );
     element('.empty-mix').hidden = state.cauldron.length > 0;
-    const values = calculateCauldron(state.cauldron);
+    element('.floating-ingredients').replaceChildren(
+      ...state.cauldron.map((item, index) => {
+        const icon = document.createElement('span');
+        icon.textContent = item.icon;
+        icon.style.setProperty('--index', String(index));
+        return icon;
+      }),
+    );
+    element('.reactions').textContent =
+      getReactions(state.difficulty)
+        .map((reaction) => reaction.description)
+        .join(' ') || 'Easy: no chemical reactions.';
+    if (state.effect) {
+      const effect = state.effect;
+      const workshop = element('.workshop');
+      resetEffects();
+      workshop.getBoundingClientRect();
+      workshop.classList.add(`effect-${effect}`);
+      element('.brew-effect').textContent =
+        effect === 'success'
+          ? '✦'
+          : effect === 'failure'
+            ? '💥'
+            : effect === 'reaction'
+              ? '✧'
+              : '−10s';
+      state.effect = null;
+    }
+    const values = calculateCauldron(state.cauldron, state.difficulty);
     const limit = state.difficulty === 'hard' ? 250 : 160;
     bars.forEach(({ key, container, value, target, marker, range }) => {
       const zone = state.recipe?.[key];
@@ -190,9 +326,9 @@ export function mountGame(root: HTMLElement): void {
       container
         .querySelector('.bar-scale > span:last-child')
         ?.replaceChildren(String(limit));
-      if (value) value.textContent = String(values[key]);
+      if (value) value.textContent = String(Number(values[key].toFixed(2)));
       if (marker)
-        marker.style.left = `${String(((values[key] + limit) / (limit * 2)) * 100)}%`;
+        marker.style.left = `${String(Math.max(0, Math.min(100, ((values[key] + limit) / (limit * 2)) * 100)))}%`;
       if (target) {
         target.hidden = !zone;
         target.style.left = `${String((((zone?.min ?? 0) + limit) / (limit * 2)) * 100)}%`;
@@ -238,7 +374,11 @@ export function mountGame(root: HTMLElement): void {
   }
   function helpText(): string {
     const rules = DIFFICULTY_SETTINGS[state.difficulty];
-    return `<p>${rules.label}: add up to ${String(rules.capacity)} portions from the shelf. Temperature (T), Density (D) and Magic Power (M) are added together, including negative values.</p><p>Match all three recipe ranges with ±${String(rules.tolerance)} tolerance, then Brew. Success earns ${String(rules.score)} points and ${String(rules.bonus / 1000)} seconds, capped at ${String(rules.time / 1000)} seconds. Failure costs one life. Every portion is spent.</p><p>You start with ${String(rules.time / 1000)} seconds and ${String(rules.lives)} lives. The run ends when time, lives or all ingredients run out. Leaving the tab pauses the game.</p><p>Choose Easy, Medium or Hard in Menu before starting. Unfinished games save automatically; Continue Game restores them on pause. Exit to Menu clears the save.</p><button data-action="close">Back to workshop</button>`;
+    return `<p>${rules.label}: add up to ${String(rules.capacity)} portions from the shelf. Temperature (T), Density (D) and Magic Power (M) are added together, including negative values.</p><p>Match all three recipe ranges with ±${String(rules.tolerance)} tolerance, then Brew. Success earns ${String(rules.score)} points and ${String(rules.bonus / 1000)} seconds, capped at ${String(rules.time / 1000)} seconds. Failure costs one life. Every portion is spent.</p><p>You start with ${String(rules.time / 1000)} seconds and ${String(rules.lives)} lives. The run ends when time, lives or all ingredients run out. Leaving the tab pauses the game.</p><p>Choose Easy, Medium or Hard in Menu before starting. Unfinished games save automatically; Continue Game restores them on pause. Exit to Menu clears the save.</p><p>Click or drag cards into the cauldron. Pour Out spends the mixture and 10 seconds without losing a life. Shortcuts during play: 1–8 add a card, B brews, C pours out, P or Escape pauses. On pause, focus Resume and press Enter or Space.</p><p>${
+      getReactions(state.difficulty)
+        .map((reaction) => reaction.description)
+        .join(' ') || 'Easy has no reactions.'
+    }</p><button data-action="close">Back to workshop</button>`;
   }
   function showPause(): void {
     showDialog(
@@ -309,6 +449,7 @@ export function mountGame(root: HTMLElement): void {
         showPause();
         break;
       case 'start':
+        resetEffects();
         state = startGame(Date.now(), Math.random, state.difficulty);
         savedGame = null;
         saved = false;
@@ -317,6 +458,10 @@ export function mountGame(root: HTMLElement): void {
         break;
       case 'brew':
         brew(state);
+        render();
+        break;
+      case 'pour':
+        pourOut(state);
         render();
         break;
       case 'pause':
@@ -330,6 +475,7 @@ export function mountGame(root: HTMLElement): void {
         render();
         break;
       case 'exit':
+        resetEffects();
         clearSave();
         savedGame = null;
         state = createMenu(state.difficulty);
@@ -395,6 +541,45 @@ export function mountGame(root: HTMLElement): void {
         }
         break;
     }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (
+      state.status !== 'playing' ||
+      dialog.open ||
+      event.repeat ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.metaKey ||
+      event.shiftKey
+    )
+      return;
+    if (
+      event.target instanceof Element &&
+      event.target.closest(
+        'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+      )
+    )
+      return;
+    const key = event.key.toLowerCase();
+    if (/^[1-8]$/.test(key)) {
+      const card = cards[Number(key) - 1];
+      if (card && !card.hidden && card.draggable) {
+        event.preventDefault();
+        card.click();
+      }
+      return;
+    }
+    const action =
+      key === 'b'
+        ? 'brew'
+        : key === 'c'
+          ? 'pour'
+          : key === 'p' || key === 'escape'
+            ? 'pause'
+            : null;
+    if (!action) return;
+    event.preventDefault();
+    element<HTMLButtonElement>(`[data-action="${action}"]`).click();
   });
   root.addEventListener('submit', (event) => {
     if (

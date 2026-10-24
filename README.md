@@ -7,11 +7,11 @@ Built for the [RS School assignment](https://github.com/rolling-scopes-school/qu
 
 ## Current scope
 
-Precondition 1, Level 1 (US 1.1–1.6) and Level 2 (US 2.1–2.2) are implemented.
+Precondition 1 and Levels 1–3 (US 1.1–1.6, 2.1–2.2, 3.1–3.6) are implemented.
 Choose Easy, Medium or Hard in Menu before starting. Each difficulty uses its own
 shelf, recipe pool, cauldron limit, timer, lives, tolerance and brew rewards.
-Medium keeps the Level 1 rules. Reactions are configured for the future Level 3;
-Level 3 gameplay is not implemented.
+Medium enables Bubbling and Solar Frost; Hard also enables Volatile Mix.
+Easy has no reactions.
 
 Unfinished runs save automatically after actions, every second, on pause and when
 leaving the page. Continue Game restores the exact stock, mixture, recipe, score,
@@ -19,7 +19,11 @@ lives, difficulty and remaining time in paused state. New games replace the save
 Exit to Menu and Game Over clear it. Invalid saves are discarded safely.
 Each difficulty has its own Top-10; existing Level 1 results remain in Medium.
 
-![Level 2 difficulty menu](docs/level-2-menu.png)
+![Level 3 gameplay](docs/level-3-desktop.jpg)
+
+[Mobile gameplay at 375 px](docs/level-3-mobile.jpg)
+
+[Level 2 difficulty menu](docs/level-2-menu.png)
 
 [Public deployment](https://romasho.github.io/alchemists-cauldron/) (updated when changes reach `story-1`).
 
@@ -43,13 +47,14 @@ Shared requirements add 30 points at Level 1. The complete assignment is worth
 ## How to play
 
 1. Choose a difficulty in **Menu**, then click **Start Game**. Each ingredient receives 2–15 portions.
-2. Click ingredient cards to add up to four portions (five on Hard), in order. T, D and M on each
-   card mean Temperature, Density and Magic Power. The bars show signed sums,
+2. Click or drag ingredient cards to add up to four portions (five on Hard), in order.
+   Hover or focus a card for Temperature, Density and Magic Power. The bars show values after reactions,
    target zones and a moving marker; green means inside the exact recipe range.
-3. Click **Brew potion** to check all three sums with the selected tolerance.
+3. Click **Brew potion** (or press **B**) to check all three values with the selected tolerance.
    Success awards points, adds time up to the starting limit, and selects a random
    recipe for the chosen difficulty. Failure loses one life. Both outcomes empty the cauldron and spend the portions.
-4. **Pause** freezes the timer and hides the play field. **Resume** continues;
+4. **Pour Out** (or **C**) clears a mixture for 10 seconds without losing a life.
+   Spent ingredients stay spent. **Pause** (**P** or **Escape**) freezes the timer and hides the play field. **Resume** continues;
    **Exit to Menu** abandons the run. Switching to another tab also pauses.
 5. Time, lives or exhausted ingredients end the run. A final mixture can still
    be brewed after the shelf is exhausted. **Play again** starts with new stock.
@@ -57,6 +62,15 @@ Shared requirements add 30 points at Level 1. The complete assignment is worth
    using letters, digits, spaces, `_` or `-`. Equal scores keep earlier results
    first. Open the board from **Menu** or **Game Over**; clearing it requires an
    in-app confirmation. Storage errors show feedback and never stop gameplay.
+
+Reactions recalculate from the current mixture. Bubbling multiplies magic by 1.5
+and removes 10 seconds only when the pair first becomes active. Solar Frost sets
+temperature to zero and multiplies density by 1.2. Volatile Mix costs one life
+and empties the cauldron. Clearing a mixture resets reaction activation.
+
+Brew results have CSS success/explosion effects, and ingredient icons float in
+the cauldron. Reduced motion is respected. Shortcuts only run during active play;
+on pause use the focused Resume button with Enter/Space (or close with Escape).
 
 **Help** explains the rules. Controls use native buttons and support keyboard
 focus. Layouts adapt from 375 px to 1920 px; reduced motion is respected.
@@ -130,6 +144,11 @@ and the assignment's story workflow:
 3. Make small commits, open a feature PR into `story-1`, and merge that PR.
 4. Open the final `story-1` PR into the original base branch and leave it unmerged
    for Cross-Check. Submit that PR URL through RS App.
+5. Create `story-2` from the completed `story-1`, and `story-3` from the completed
+   `story-2`. For each level, create feature branches from its story branch and
+   merge their task PRs back into that same story branch.
+6. Leave the final `story-2` → `story-1` and `story-3` → `story-2` PRs unmerged
+   for Cross-Check. Keep each story's changes in its own review diff.
 
 Use lowercase Conventional Commit types and imperative English descriptions:
 

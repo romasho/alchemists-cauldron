@@ -11,7 +11,7 @@
 }
 body {
   margin: 0;
-  min-width: 375px;
+  min-width: 0;
   min-height: 100svh;
   background: radial-gradient(ellipse at 50% 0, #30463b, transparent 70%);
 }
@@ -30,11 +30,12 @@ button {
     background 0.2s,
     border-color 0.2s;
 }
-button:hover:enabled {
+button:hover:enabled:not([aria-disabled='true']) {
   background: #354a3d;
   border-color: #afc896;
 }
-button:disabled {
+button:disabled,
+button[aria-disabled='true'] {
   cursor: default;
   opacity: 0.45;
 }
@@ -530,5 +531,143 @@ th {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+.ingredient-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: calc(100vw - 16px);
+  padding: 0.8rem 1rem;
+  border: 1px solid #c8d7ac;
+  border-radius: 8px;
+  background: #101e20;
+  box-shadow: 0 8px 30px #0009;
+  color: #eee9dd;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  white-space: pre-line;
+  pointer-events: none;
+}
+.pour {
+  width: 100%;
+  margin-top: 0.65rem;
+}
+.cauldron-art {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.cauldron-art img {
+  pointer-events: none;
+}
+.drop-active {
+  border-color: #d8bb7b;
+  background: #b5c98e30;
+  box-shadow: 0 0 22px #b5c98e55;
+}
+.dragging {
+  opacity: 0.5;
+}
+.ingredient[draggable='true'] {
+  cursor: grab;
+}
+.floating-ingredients {
+  position: absolute;
+  width: 150px;
+  height: 80px;
+  top: calc(50% - 50px);
+  pointer-events: none;
+}
+.floating-ingredients span {
+  position: absolute;
+  left: calc(10% + var(--index) * 18%);
+  top: calc(15% + var(--index) * 8%);
+  color: #f2d79e;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 6px #000;
+  animation: float-ingredient 2.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--index) * -0.5s);
+}
+.brew-effect {
+  position: absolute;
+  pointer-events: none;
+  font-size: 4rem;
+  opacity: 0;
+  color: #d0ef9d;
+}
+.effect-success .brew-effect,
+.effect-reaction .brew-effect,
+.effect-pour .brew-effect {
+  animation: brew-spark 0.85s ease-out;
+}
+.effect-failure .brew-effect {
+  animation: explosion 0.65s ease-out;
+}
+.effect-failure {
+  animation: screen-shake 0.35s ease-out;
+}
+.effect-success .cauldron-art {
+  animation: success-glow 0.85s ease-out;
+}
+.obscured .floating-ingredients span {
+  animation-play-state: paused;
+}
+@keyframes float-ingredient {
+  to {
+    transform: translateY(-18px) rotate(12deg);
+  }
+}
+@keyframes brew-spark {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-70px) scale(1.5);
+  }
+}
+@keyframes explosion {
+  0% {
+    opacity: 1;
+    transform: scale(0.2);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.8);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+@keyframes screen-shake {
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+@keyframes success-glow {
+  30% {
+    box-shadow: 0 0 55px #c7efac99;
+    background-color: #8daa6455;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brew-effect {
+    font-size: 2rem;
+  }
+  .effect-success .cauldron-art {
+    border-color: #c7efac;
+  }
+  .effect-failure .cauldron-art {
+    border-color: #ff9b90;
   }
 }
