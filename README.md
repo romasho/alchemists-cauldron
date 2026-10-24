@@ -8,7 +8,7 @@ Built for the [RS School assignment](https://github.com/rolling-scopes-school/qu
 
 The local implementation includes Level 1 gameplay and the Level 2/3 features: difficulty selection, save/continue, per-difficulty Top-10, mouse drag-and-drop, ingredient tooltips, chemical reactions, Pour Out, shortcuts and CSS visual feedback. See the [requirements audit](docs/requirements-audit.md) for implementation details and verification limits.
 
-The [existing public deployment](https://romasho.github.io/alchemists-cauldron/) updates when changes reach its configured branch; local changes have not been pushed or deployed by this task.
+The [public deployment](https://romasho.github.io/alchemists-cauldron/) publishes the latest `story-3` build after the quality checks and production build pass.
 
 ![Workshop interface](docs/workshop-desktop.png)
 
@@ -123,7 +123,7 @@ task, screenshot, deployment, completion/deadline dates, and scored self-check.
 Fill the actual course deadline from RS App; it is not specified in the task.
 
 GitHub Actions repeats the quality checks and production build for pushes and PRs.
-The deployment workflow publishes the checked `story-1` build to GitHub Pages.
+The deployment workflow publishes the checked `story-3` build to GitHub Pages.
 The final story PR stays open while the story build remains publicly available.
 For subsequent levels, create `story-2` from `story-1` and `story-3` from `story-2`, targeting each final unmerged PR at the previous story branch.
 
