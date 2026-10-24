@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workshop design preview</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import '/src/styles/style.css';
+      import { mountGame } from '/src/ui/game.ts';
+      import { startGame, getShelf } from '/src/state/game-state.ts';
+      import { RECIPES } from '/src/data/recipes.ts';
+      const fixture =
+        new URLSearchParams(location.search).get('fixture') ?? 'ready';
+      const requested = new URLSearchParams(location.search).get('difficulty');
+      const difficulty = ['easy', 'hard'].includes(requested)
+        ? requested
+        : 'medium';
+      const state = startGame(Date.now(), () => 0.5, difficulty);
+      const SHELF = getShelf(difficulty);
+      state.recipe = RECIPES.find(
+        (recipe) =>
+          recipe.name ===
+          (difficulty === 'easy'
+            ? 'Moon Mist'
+            : difficulty === 'hard'
+              ? 'Phoenix Pulse'
+              : 'Dusty Void'),
+      );
+      const ingredient = (id) => SHELF.find((item) => item.id === id);
+      if (fixture !== 'empty')
+        state.cauldron =
+          difficulty === 'easy'
+            ? [ingredient('dragon'), ingredient('fairy')]
+            : difficulty === 'hard'
+              ? [ingredient('phoenix'), ingredient('fairy')]
+              : [ingredient('fairy'), ingredient('void')];
+      if (fixture === 'full')
+        state.cauldron = [
+          ingredient('frost'),
+          ingredient('dragon'),
+          ingredient('mandrake'),
+          ingredient('acid'),
+        ];
+      if (fixture === 'full' && difficulty === 'hard')
+        state.cauldron.push(ingredient('fairy'));
+      if (fixture === 'high' && difficulty === 'hard')
+        state.cauldron = Array.from({ length: 5 }, () => ingredient('phoenix'));
+      if (fixture === 'depleted') {
+        state.stock['dragon'] = 0;
+        state.stock['void'] = 0;
+      }
+      if (fixture === 'long')
+        state.recipe = {
+          ...state.recipe,
+          name: 'Elixir of the Everlasting Midnight Constellation',
+        };
+      if (fixture === 'last-life') {
+        state.lives = 1;
+        state.cauldron = [ingredient('dragon')];
+      }
+      if (fixture === 'game-over') {
+        state.status = 'game-over';
+        state.score = 400;
+        state.reason = 'No lives left';
+        state.lives = 0;
+      }
+      state.message =
+        'Design preview · Live game controls and selected difficulty rules';
+      mountGame(document.querySelector('#app'), state, { persist: false });
+      function audit() {
+        const brew = document.querySelector('.brew').getBoundingClientRect();
+        const scene = document.querySelector('.scene').getBoundingClientRect();
+        const hint = document
+          .querySelector('.brew-hint')
+          .getBoundingClientRect();
+        const feedback = document
+          .querySelector('.feedback')
+          .getBoundingClientRect();
+        const panelNames = [
+          '.recipe-panel',
+          '.scales-panel',
+          '.shelf-panel',
+          '.cauldron-panel',
+        ];
+        const report = {
+          difficulty,
+          cardsOnShelf: document.querySelectorAll(
+            '.ingredient-card:not([hidden])',
+          ).length,
+          valuesOnCards: document.querySelectorAll(
+            '.ingredient .ingredient-values',
+          ).length,
+          backgroundFullViewport: getComputedStyle(
+            document.body,
+          ).backgroundImage.includes('workshop-background'),
+          width: innerWidth,
+          height: innerHeight,
+          overflow:
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+          brewVisible: brew.bottom <= innerHeight && brew.top >= 0,
+          sceneOverlapsBrew: scene.bottom > brew.top,
+          hintOverlapsFeedback: hint.bottom > feedback.top,
+          recipeRowOverflow: [
+            ...document.querySelectorAll('.recipe-ranges > div'),
+          ].some((row) => row.scrollWidth > row.clientWidth),
+          boxes: [
+            '.title-sign',
+            '.shelf-panel',
+            '.ingredient',
+            '.ingredient-name',
+            '.cauldron-panel',
+            '.cauldron-art',
+            '.recipe-panel',
+            '.book-page',
+            '.scales-panel',
+            '.brew-actions',
+          ].map((selector) => ({
+            selector,
+            height: Math.round(
+              document.querySelector(selector).getBoundingClientRect().height,
+            ),
+          })),
+          order: panelNames.map((selector) => ({
+            selector,
+            top: Math.round(
+              document.querySelector(selector).getBoundingClientRect().top,
+            ),
+          })),
+          images: [...document.images].every(
+            (image) => image.complete && image.naturalWidth > 0,
+          ),
+        };
+        parent.postMessage({ workshopAudit: report }, location.origin);
+      }
+      addEventListener('load', audit);
+      addEventListener('resize', audit);
+    </script>
+  </body>
+</html>

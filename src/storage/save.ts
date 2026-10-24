@@ -1,160 +1,105 @@
 import { DIFFICULTY_SETTINGS, isDifficulty } from '../data/difficulty.ts';
 import { RECIPES } from '../data/recipes.ts';
-import { PARAMETERS } from '../logic/brewing.ts';
-import { createMenu, getShelf, type GameState } from '../state/game-state.ts';
+import { createMenu, getShelf } from '../state/game-state.ts';
+import type { GameState } from '../state/game-state.ts';
 
-export const SAVE_KEY = 'alchemists-cauldron-save';
+export const SAVE_KEY = 'alchemists-cauldron-save-v1';
+const record = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const integer = (value: unknown, min: number, max: number): value is number =>
+  typeof value === 'number' &&
+  Number.isSafeInteger(value) &&
+  value >= min &&
+  value <= max;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isInteger(value: unknown, min: number, max: number): value is number {
-  return (
-    typeof value === 'number' &&
-    Number.isSafeInteger(value) &&
-    value >= min &&
-    value <= max
-  );
-}
-
-interface SavedGame {
-  difficulty: GameState['difficulty'];
-  status: 'playing' | 'paused';
-  score: number;
-  timeLeft: number;
-  lives: number;
-  activeRecipe: NonNullable<GameState['recipe']>;
-  cauldronIngredients: GameState['cauldron'];
-  shelfStock: GameState['stock'];
-}
-
-export function isValidSave(data: unknown): data is SavedGame {
-  if (!isRecord(data) || !isDifficulty(data['difficulty'])) return false;
-  const difficulty = data['difficulty'];
+export function restoreSave(value: unknown): GameState | null {
+  if (!record(value) || !isDifficulty(value['difficulty'])) return null;
+  const difficulty = value['difficulty'];
   const rules = DIFFICULTY_SETTINGS[difficulty];
+  if (value['status'] !== 'playing' && value['status'] !== 'paused')
+    return null;
+  if (
+    !integer(value['score'], 0, Number.MAX_SAFE_INTEGER) ||
+    !integer(value['timeLeft'], 1, rules.time) ||
+    !integer(value['lives'], 1, rules.lives)
+  )
+    return null;
+  const recipeValue = value['recipe'];
+  if (!record(recipeValue)) return null;
+  const recipe = RECIPES.find(
+    (item) => item.id === recipeValue['id'] && item.difficulty === difficulty,
+  );
+  if (!recipe) return null;
+  const items = value['cauldron'];
+  const stockValue = value['stock'];
+  if (
+    !Array.isArray(items) ||
+    items.length > rules.capacity ||
+    !record(stockValue)
+  )
+    return null;
   const shelf = getShelf(difficulty);
-  const recipe = data['activeRecipe'];
-  const stock = data['shelfStock'];
-  const cauldron = data['cauldronIngredients'];
   if (
-    (data['status'] !== 'playing' && data['status'] !== 'paused') ||
-    !isInteger(data['score'], 0, Number.MAX_SAFE_INTEGER) ||
-    data['score'] % rules.score !== 0 ||
-    !isInteger(data['timeLeft'], 1, rules.time) ||
-    !isInteger(data['lives'], 1, rules.lives) ||
-    !isRecord(recipe) ||
-    !isRecord(stock) ||
-    !Array.isArray(cauldron) ||
-    cauldron.length > rules.capacity ||
-    Object.keys(stock).length !== shelf.length
+    Object.keys(stockValue).length !== shelf.length ||
+    shelf.some((item) => !integer(stockValue[item.id], 0, 15))
   )
-    return false;
-  const canonical = RECIPES.find(
-    (item) => item.id === recipe['id'] && item.difficulty === difficulty,
-  );
-  if (
-    !canonical ||
-    recipe['name'] !== canonical.name ||
-    recipe['difficulty'] !== difficulty ||
-    !PARAMETERS.every((key) => {
-      const range = recipe[key];
-      return (
-        isRecord(range) &&
-        range['min'] === canonical[key].min &&
-        range['max'] === canonical[key].max
-      );
-    })
-  )
-    return false;
-  if (
-    !cauldron.every((item: unknown) => {
-      if (!isRecord(item)) return false;
-      const ingredient = shelf.find((candidate) => candidate.id === item['id']);
-      return (
-        ingredient &&
-        item['name'] === ingredient.name &&
-        item['icon'] === ingredient.icon &&
-        PARAMETERS.every((key) => item[key] === ingredient[key])
-      );
-    })
-  )
-    return false;
-  return (
-    shelf.every(
-      (item) =>
-        isInteger(stock[item.id], 0, 15) &&
-        Number(stock[item.id]) +
-          cauldron.filter(
-            (portion: unknown) =>
-              isRecord(portion) && portion['id'] === item.id,
-          ).length <=
-          15,
-    ) &&
-    (cauldron.length > 0 ||
-      Object.values(stock).some((amount) => Number(amount) > 0))
-  );
+    return null;
+  const cauldron = [];
+  for (const item of items) {
+    if (!record(item)) return null;
+    const ingredient = shelf.find((known) => known.id === item['id']);
+    if (!ingredient) return null;
+    cauldron.push(ingredient);
+  }
+  const stock: Record<string, number> = {};
+  for (const item of shelf) {
+    const amount = stockValue[item.id];
+    if (
+      !integer(amount, 0, 15) ||
+      amount + cauldron.filter((added) => added.id === item.id).length > 15
+    )
+      return null;
+    stock[item.id] = amount;
+  }
+  if (!cauldron.length && Object.values(stock).every((amount) => amount === 0))
+    return null;
+  return {
+    ...createMenu(difficulty),
+    score: value['score'],
+    timeLeft: value['timeLeft'],
+    lives: value['lives'],
+    recipe,
+    cauldron,
+    stock,
+    status: 'paused',
+    message: 'Saved game restored. Resume when ready.',
+  };
 }
-
-export function clearSave(): void {
+export function clearSave(): boolean {
   try {
     localStorage.removeItem(SAVE_KEY);
-  } catch {
-    /* Storage may be blocked. */
-  }
-}
-
-export function saveGame(state: GameState): boolean {
-  if (state.status !== 'playing' && state.status !== 'paused') {
-    if (state.status === 'game-over') clearSave();
-    return false;
-  }
-  if (!state.recipe) {
-    clearSave();
-    return false;
-  }
-  try {
-    const data: SavedGame = {
-      difficulty: state.difficulty,
-      status: state.status,
-      score: state.score,
-      timeLeft: state.timeLeft,
-      lives: state.lives,
-      activeRecipe: state.recipe,
-      cauldronIngredients: state.cauldron,
-      shelfStock: state.stock,
-    };
-    if (!isValidSave(data)) {
-      clearSave();
-      return false;
-    }
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     return true;
   } catch {
     return false;
   }
 }
-
+export function saveGame(state: GameState): boolean {
+  if (state.status !== 'playing' && state.status !== 'paused')
+    return clearSave();
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    return true;
+  } catch {
+    return false;
+  }
+}
 export function loadGame(): GameState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw === null) return null;
-    const data: unknown = JSON.parse(raw);
-    if (!isValidSave(data)) {
-      clearSave();
-      return null;
-    }
-    return {
-      ...createMenu(data.difficulty),
-      status: 'paused',
-      score: data.score,
-      timeLeft: data.timeLeft,
-      lives: data.lives,
-      recipe: data.activeRecipe,
-      cauldron: data.cauldronIngredients,
-      stock: data.shelfStock,
-      message: 'Your saved game is ready. Resume when you are.',
-    };
+    if (!raw) return null;
+    const result = restoreSave(JSON.parse(raw) as unknown);
+    if (!result) clearSave();
+    return result;
   } catch {
     clearSave();
     return null;

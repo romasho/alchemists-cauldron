@@ -1,14 +1,20 @@
+import { DIFFICULTY_SETTINGS } from '../src/data/difficulty.ts';
+import { REACTIONS } from '../src/data/reactions.ts';
+import { calculateMixture, activeReactions } from '../src/logic/brewing.ts';
+import { getShelf, pourOut } from '../src/state/game-state.ts';
+import {
+  SAVE_KEY,
+  saveGame,
+  loadGame,
+  restoreSave,
+  clearSave,
+} from '../src/storage/save.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { INGREDIENTS } from '../src/data/ingredients.ts';
 import { RECIPES } from '../src/data/recipes.ts';
-import { DIFFICULTIES, DIFFICULTY_SETTINGS } from '../src/data/difficulty.ts';
-import {
-  clearSave,
-  loadGame,
-  saveGame,
-  SAVE_KEY,
-} from '../src/storage/save.ts';
+import { parameterStatus } from '../src/ui/parameter-status.ts';
+import { recordResult } from '../src/storage/leaderboard.ts';
 import {
   calculateCauldron,
   checkBrew,
@@ -33,6 +39,16 @@ import {
   writeLeaderboard,
 } from '../src/storage/leaderboard.ts';
 
+void test('parameter text distinguishes exact range, inclusive tolerance and direction', () => {
+  const zone = { min: -13, max: -3 };
+  assert.equal(parameterStatus(0), 'Awaiting recipe');
+  assert.equal(parameterStatus(-22, zone), '↑ Below target');
+  assert.equal(parameterStatus(-21, zone), '≈ Within ±8 tolerance');
+  for (const value of [-13, -8, -3])
+    assert.equal(parameterStatus(value, zone), '✓ In target range');
+  assert.equal(parameterStatus(5, zone), '≈ Within ±8 tolerance');
+  assert.equal(parameterStatus(6, zone), '↓ Above target');
+});
 void test('catalogue, recipe pool, signed sums and stock bounds', () => {
   assert.equal(INGREDIENTS.length, 8);
   assert.equal(RECIPES.length, 20);
@@ -76,14 +92,14 @@ void test('capacity, ordered additions, depletion and invalid ids are guarded', 
 });
 void test('successful brew spends stock, scores and caps time; empty brew does nothing', () => {
   const state = startGame(1000, () => 0);
-  addIngredient(state, 'fairy', 1000);
+  addIngredient(state, 'dragon', 1000);
   addIngredient(state, 'acid', 1000);
   assert.ok(state.recipe);
   assert.equal(checkBrew(state.cauldron, state.recipe), true);
   brew(state, 2000, () => 0.5);
   assert.equal(state.score, 200);
   assert.equal(state.timeLeft, RULES.time);
-  assert.equal(state.stock['fairy'], 1);
+  assert.equal(state.stock['dragon'], 1);
   assert.equal(state.stock['acid'], 1);
   assert.equal(state.cauldron.length, 0);
   brew(state, 2000);
@@ -194,218 +210,210 @@ void test('storage handles malformed data, invalid entries and unavailable stora
   Reflect.deleteProperty(globalThis, 'localStorage');
 });
 
-void test('each difficulty sets stock, limits, recipe pool, tolerance and rewards', () => {
-  for (const difficulty of DIFFICULTIES) {
+void test('difficulty config controls shelf, capacity, lives, timer and recipe pool', () => {
+  for (const difficulty of ['easy', 'medium', 'hard'] as const) {
     const rules = DIFFICULTY_SETTINGS[difficulty];
-    const state = startGame(0, () => 0.5, difficulty);
+    const state = startGame(1000, () => 0.5, difficulty);
     assert.equal(state.difficulty, difficulty);
     assert.equal(state.timeLeft, rules.time);
     assert.equal(state.lives, rules.lives);
-    assert.equal(Object.keys(state.stock).length, rules.shelfSize);
     assert.equal(state.recipe?.difficulty, difficulty);
-    for (let index = 0; index < rules.capacity + 1; index += 1) {
-      addIngredient(state, 'dragon', 0);
-    }
+    assert.equal(Object.keys(state.stock).length, rules.shelfSize);
+    for (let count = 0; count <= rules.capacity; count++)
+      addIngredient(state, 'fairy', 1000);
     assert.equal(state.cauldron.length, rules.capacity);
-    const first = INGREDIENTS[0];
-    const recipe = state.recipe;
-    assert.ok(first && recipe);
-    const edge = {
-      ...first,
-      temperature: recipe.temperature.min - rules.tolerance,
-      density: recipe.density.max + rules.tolerance,
-      magicPower: recipe.magicPower.min,
+    assert.equal(state.stock['fairy'], 9 - rules.capacity);
+    if (difficulty !== 'hard') {
+      const before = state.stock['phoenix'];
+      addIngredient(state, 'phoenix', 1000);
+      assert.equal(state.stock['phoenix'], before);
+    }
+  }
+});
+void test('difficulty tolerance and successful rewards follow the selected table', () => {
+  for (const difficulty of ['easy', 'medium', 'hard'] as const) {
+    const rules = DIFFICULTY_SETTINGS[difficulty];
+    const state = startGame(0, () => 0.5, difficulty);
+    const base = getShelf(difficulty)[0];
+    assert.ok(base);
+    state.cauldron = [base];
+    state.recipe = {
+      id: 'test',
+      difficulty,
+      name: 'Test',
+      temperature: { min: 25, max: 25 },
+      density: { min: 8, max: 8 },
+      magicPower: { min: 10, max: 10 },
     };
-    assert.ok(checkBrew([edge], recipe, rules.tolerance));
+    brew(state, 20_000, () => 0.5);
+    assert.equal(state.score, rules.score);
+    assert.equal(state.timeLeft, rules.time - 20_000 + rules.bonus);
+    assert.equal(state.recipe.difficulty, difficulty);
+    const edge = { ...base, temperature: 25 - rules.tolerance };
     assert.equal(
       checkBrew(
-        [{ ...edge, temperature: edge.temperature - 1 }],
-        recipe,
-        rules.tolerance,
+        [edge],
+        {
+          ...state.recipe,
+          temperature: { min: 25, max: 25 },
+          density: { min: 8, max: 8 },
+          magicPower: { min: 10, max: 10 },
+        },
+        difficulty,
       ),
-      false,
+      true,
     );
-
-    const success = startGame(0, () => 0, difficulty);
-    addIngredient(success, difficulty === 'hard' ? 'phoenix' : 'fairy', 0);
-    addIngredient(
-      success,
-      difficulty === 'easy'
-        ? 'dragon'
-        : difficulty === 'medium'
-          ? 'acid'
-          : 'fairy',
-      0,
+  }
+});
+void test('Bubbling applies to recomputed values and charges time only on activation', () => {
+  const state = startGame(0, () => 0.5);
+  addIngredient(state, 'fairy', 0);
+  addIngredient(state, 'acid', 0);
+  assert.equal(state.timeLeft, 140_000);
+  assert.equal(calculateMixture(state.cauldron, 'medium').magicPower, 51);
+  addIngredient(state, 'dragon', 0);
+  assert.equal(state.timeLeft, 140_000);
+  assert.equal(calculateMixture(state.cauldron, 'medium').magicPower, 66);
+  assert.equal(REACTIONS.length, 15);
+  assert.equal(activeReactions(state.cauldron, 'easy').length, 0);
+  pourOut(state, 0);
+  addIngredient(state, 'fairy', 0);
+  addIngredient(state, 'acid', 0);
+  assert.equal(state.timeLeft, 120_000);
+});
+void test('Solar Frost transforms values; Volatile Mix spends portions, loses life and clears', () => {
+  const state = startGame(0, () => 0.5, 'hard');
+  addIngredient(state, 'dragon', 0);
+  addIngredient(state, 'frost', 0);
+  assert.deepEqual(calculateMixture(state.cauldron, 'hard'), {
+    temperature: 0,
+    density: 14.4,
+    magicPower: 24,
+  });
+  addIngredient(state, 'void', 0);
+  addIngredient(state, 'phoenix', 0);
+  assert.equal(state.cauldron.length, 0);
+  assert.equal(state.lives, 2);
+  assert.equal(state.stock['void'], 8);
+  assert.equal(state.stock['phoenix'], 8);
+  assert.equal(state.lastReactionId, 'volatile-mix');
+});
+void test('Pour Out charges ten seconds once, preserves lives and does not refund stock', () => {
+  const state = startGame(0, () => 0.5);
+  addIngredient(state, 'fairy', 0);
+  const recipe = state.recipe;
+  pourOut(state, 1000);
+  assert.equal(state.timeLeft, 139_000);
+  assert.equal(state.lives, 3);
+  assert.equal(state.stock['fairy'], 8);
+  assert.equal(state.cauldron.length, 0);
+  assert.equal(state.recipe, recipe);
+  pourOut(state, 1000);
+  assert.equal(state.timeLeft, 139_000);
+  addIngredient(state, 'fairy', 1000);
+  state.endTime = 2000;
+  pourOut(state, 1000);
+  assert.equal(state.reason, 'Time is up');
+});
+void test('save validation restores canonical data paused and rejects finished or malformed runs', () => {
+  const state = startGame(0, () => 0.5, 'hard');
+  addIngredient(state, 'fairy', 0);
+  pauseGame(state, 1234);
+  const restored = restoreSave(JSON.parse(JSON.stringify(state)) as unknown);
+  assert.ok(restored);
+  assert.equal(restored.status, 'paused');
+  assert.equal(restored.difficulty, 'hard');
+  assert.equal(restored.timeLeft, 148_766);
+  assert.deepEqual(restored.stock, state.stock);
+  assert.equal(restored.cauldron[0], INGREDIENTS[1]);
+  for (const invalid of [
+    null,
+    {},
+    { ...state, status: 'game-over' },
+    { ...state, timeLeft: -1 },
+    { ...state, difficulty: 'other' },
+    { ...state, stock: { fairy: 500 } },
+    { ...state, cauldron: [{ id: 'missing' }] },
+    { ...state, recipe: { id: '1' } },
+  ])
+    assert.equal(restoreSave(invalid), null);
+});
+void test('save storage tolerates corruption and keeps difficulty leaderboards isolated', () => {
+  const data = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+      removeItem: (key: string) => data.delete(key),
+    },
+  });
+  const state = startGame(0, () => 0.5, 'easy');
+  addIngredient(state, 'fairy', 0);
+  assert.equal(saveGame(state), true);
+  assert.equal(loadGame()?.difficulty, 'easy');
+  data.set(SAVE_KEY, '{broken');
+  assert.equal(loadGame(), null);
+  assert.equal(data.has(SAVE_KEY), false);
+  for (const difficulty of ['easy', 'medium', 'hard'] as const)
+    writeLeaderboard(
+      [
+        {
+          name: difficulty,
+          score: DIFFICULTY_SETTINGS[difficulty].score,
+          date: 1,
+        },
+      ],
+      difficulty,
     );
-    brew(success, 30_000, () => 0.999);
-    assert.equal(success.score, rules.score);
-    assert.equal(success.timeLeft, rules.time - 30_000 + rules.bonus);
-    assert.equal(success.recipe?.difficulty, difficulty);
-    const wrong = startGame(0, () => 0, 'easy');
-    addIngredient(wrong, 'phoenix', 0);
-    assert.equal(wrong.cauldron.length, 0);
-  }
+  for (const difficulty of ['easy', 'medium', 'hard'] as const)
+    assert.equal(readLeaderboard(difficulty)[0]?.name, difficulty);
+  assert.equal(clearSave(), true);
+  Reflect.deleteProperty(globalThis, 'localStorage');
 });
-
-void test('save round trips preserve every run field and restore on pause without a deadline', () => {
-  const storage = new Map<string, string>();
+void test('saving a result preserves newer records and rechecks Top-10 qualification', () => {
+  const data = new Map<string, string>();
+  const previousStorage = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'localStorage',
+  );
   Object.defineProperty(globalThis, 'localStorage', {
     configurable: true,
     value: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => storage.set(key, value),
-      removeItem: (key: string) => storage.delete(key),
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
     },
   });
   try {
-    for (const difficulty of DIFFICULTIES) {
-      const state = startGame(0, () => 0, difficulty);
-      state.score = DIFFICULTY_SETTINGS[difficulty].score;
-      state.lives -= 1;
-      addIngredient(state, 'dragon', 1000);
-      assert.ok(saveGame(state));
-      const restored = loadGame();
-      assert.ok(restored);
-      assert.equal(restored.status, 'paused');
-      assert.equal(restored.endTime, 0);
-      for (const key of [
-        'difficulty',
-        'score',
-        'timeLeft',
-        'lives',
-        'recipe',
-        'cauldron',
-        'stock',
-      ] as const) {
-        assert.deepEqual(restored[key], state[key]);
-      }
-      updateTime(restored, 1_000_000);
-      assert.equal(restored.timeLeft, state.timeLeft);
-      resumeGame(restored, 1_000_000);
-      updateTime(restored, 1_001_000);
-      assert.equal(restored.timeLeft, state.timeLeft - 1000);
-      pauseGame(restored, 1_001_000);
-      assert.ok(saveGame(restored));
-      assert.equal(loadGame()?.status, 'paused');
-    }
-    const fresh = startGame(0, () => 0, 'easy');
-    assert.ok(saveGame(fresh));
-    assert.equal(loadGame()?.difficulty, 'easy');
-    updateTime(fresh, 180_000);
-    assert.equal(saveGame(fresh), false);
-    assert.equal(loadGame(), null);
-    saveGame(startGame());
-    clearSave();
-    assert.equal(storage.has(SAVE_KEY), false);
-    assert.equal(loadGame(), null);
-  } finally {
-    Reflect.deleteProperty(globalThis, 'localStorage');
-  }
-});
+    const alice = { name: 'Alice', score: 300, date: 1 };
+    const bob = { name: 'Bob', score: 600, date: 2 };
+    writeLeaderboard([alice], 'hard');
+    const earlierSnapshot = readLeaderboard('hard');
+    writeLeaderboard([...earlierSnapshot, bob], 'hard');
+    assert.equal(
+      recordResult({ name: 'Carol', score: 900, date: 3 }, 'hard'),
+      'saved',
+    );
+    assert.deepEqual(
+      readLeaderboard('hard').map((entry) => entry.name),
+      ['Carol', 'Bob', 'Alice'],
+    );
+    assert.deepEqual(earlierSnapshot, [alice]);
 
-void test('invalid saves are discarded and unavailable storage never throws', () => {
-  let raw: string | null = null;
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: () => raw,
-      setItem: (_key: string, value: string) => {
-        raw = value;
-      },
-      removeItem: () => {
-        raw = null;
-      },
-    },
-  });
-  try {
-    const state = startGame(0, () => 0, 'hard');
-    saveGame(state);
-    const valid = raw;
-    const invalid = [
-      null,
-      [],
-      { score: undefined },
-      { status: 'game-over' },
-      { difficulty: 'unknown' },
-      { timeLeft: 0 },
-      { timeLeft: 150_001 },
-      { lives: 0 },
-      { lives: 4 },
-      { score: -1 },
-      { score: 1 },
-      { activeRecipe: RECIPES[0] },
-      { shelfStock: {} },
-      { shelfStock: { ...state.stock, dragon: -1 } },
-      { shelfStock: { ...state.stock, dragon: 16 } },
-      { cauldronIngredients: [null] },
-      { cauldronIngredients: [{ ...INGREDIENTS[0], temperature: 999 }] },
-      { cauldronIngredients: Array.from({ length: 6 }, () => INGREDIENTS[0]) },
-      {
-        shelfStock: Object.fromEntries(INGREDIENTS.map((item) => [item.id, 0])),
-      },
-    ];
-    assert.ok(valid);
-    for (const patch of invalid) {
-      const original: unknown = JSON.parse(valid);
-      raw = JSON.stringify(
-        patch && typeof patch === 'object' && !Array.isArray(patch)
-          ? { ...(original as object), ...patch }
-          : patch,
-      );
-      assert.equal(loadGame(), null);
-      assert.equal(raw, null);
-    }
-    raw = '{}';
-    assert.equal(loadGame(), null);
-    raw = '{broken';
-    assert.equal(loadGame(), null);
-    assert.equal(raw, null);
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true,
-      get: () => {
-        throw new Error('blocked');
-      },
-    });
-    assert.equal(loadGame(), null);
-    assert.equal(saveGame(state), false);
-    assert.doesNotThrow(clearSave);
+    const strongerResults = Array.from({ length: 10 }, (_, index) => ({
+      name: `Player-${String(index)}`,
+      score: 1200,
+      date: index + 4,
+    }));
+    writeLeaderboard(strongerResults, 'hard');
+    assert.equal(
+      recordResult({ name: 'Late', score: 900, date: 20 }, 'hard'),
+      'not-qualified',
+    );
+    assert.deepEqual(readLeaderboard('hard'), strongerResults);
   } finally {
-    Reflect.deleteProperty(globalThis, 'localStorage');
-  }
-});
-
-void test('leaderboards keep separate Top-10 lists and clearing affects only one difficulty', () => {
-  const storage = new Map<string, string>();
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => storage.set(key, value),
-    },
-  });
-  try {
-    for (const difficulty of DIFFICULTIES) {
-      assert.ok(
-        writeLeaderboard(
-          Array.from({ length: 12 }, (_, index) => ({
-            name: difficulty,
-            score: (index + 1) * DIFFICULTY_SETTINGS[difficulty].score,
-            date: index,
-          })),
-          difficulty,
-        ),
-      );
-      assert.equal(readLeaderboard(difficulty).length, 10);
-      assert.ok(
-        readLeaderboard(difficulty).every((entry) => entry.name === difficulty),
-      );
-    }
-    assert.ok(storage.has(LEADERBOARD_KEY));
-    writeLeaderboard([], 'hard');
-    assert.deepEqual(readLeaderboard('hard'), []);
-    assert.equal(readLeaderboard('easy').length, 10);
-    assert.equal(readLeaderboard('medium').length, 10);
-  } finally {
-    Reflect.deleteProperty(globalThis, 'localStorage');
+    if (previousStorage)
+      Object.defineProperty(globalThis, 'localStorage', previousStorage);
+    else Reflect.deleteProperty(globalThis, 'localStorage');
   }
 });

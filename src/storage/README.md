@@ -1,4 +1,3 @@
 # Persistence
 
-Place save/continue and leaderboard persistence here in later stories. Treat
-parsed storage data as unknown, validate it, and handle missing or corrupt data.
+`save.ts` saves unfinished runs and restores validated catalogue data in paused state. Missing, malformed and unavailable storage never throw into gameplay. New games replace unfinished saves; game over and Exit to Menu clear them. `leaderboard.ts` keeps a Top-10 per difficulty and preserves the original Medium storage key.

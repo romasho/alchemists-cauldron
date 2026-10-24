@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Workshop composition review</title>
+    <style>
+      body {
+        margin: 0;
+        background: #080c0b;
+        color: #dbc896;
+        font: 12px system-ui;
+      }
+      iframe {
+        display: block;
+        border: 0;
+        transform-origin: 0 0;
+      }
+      #stage {
+        overflow: hidden;
+      }
+      output {
+        display: block;
+        padding: 8px;
+        max-width: 680px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"><iframe title="Workshop game preview"></iframe></div>
+    <output>Loading layout audit…</output>
+    <script>
+      const query = new URLSearchParams(location.search);
+      const width = Number(query.get('width') ?? 1440);
+      const height = Number(query.get('height') ?? 900);
+      const scale =
+        query.get('scale') === 'native' ? 1 : Math.min(1, 680 / width);
+      if (query.has('clean'))
+        document.querySelector('output').style.display = 'none';
+      const frame = document.querySelector('iframe');
+      frame.style.width = `${width}px`;
+      frame.style.height = `${height}px`;
+      frame.style.transform = `scale(${scale})`;
+      document.querySelector('#stage').style.width = `${width * scale}px`;
+      document.querySelector('#stage').style.height = `${height * scale}px`;
+      frame.src = `./game-preview.html?fixture=${encodeURIComponent(query.get('fixture') ?? 'ready')}&difficulty=${encodeURIComponent(query.get('difficulty') ?? 'medium')}`;
+      addEventListener('message', (event) => {
+        if (event.origin !== location.origin || !event.data.workshopAudit)
+          return;
+        const data = event.data.workshopAudit;
+        document.querySelector('output').dataset.audit = JSON.stringify(data);
+        document.querySelector('output').textContent =
+          `${data.width} × ${data.height} · Horizontal overflow: ${data.overflow} · Brew visible: ${data.brewVisible} · Scene overlaps Brew: ${data.sceneOverlapsBrew} · All images loaded: ${data.images} · Order: ${data.order.map((item) => `${item.selector} ${item.top}`).join(', ')}`;
+      });
+    </script>
+  </body>
+</html>

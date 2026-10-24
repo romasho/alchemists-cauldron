@@ -1,5 +1,12 @@
 import { DIFFICULTY_SETTINGS } from '../data/difficulty.ts';
-import type { Ingredient, Parameter, Recipe, Values } from '../data/types.ts';
+import { REACTIONS } from '../data/reactions.ts';
+import type {
+  Difficulty,
+  Ingredient,
+  Parameter,
+  Recipe,
+  Values,
+} from '../data/types.ts';
 
 export const PARAMETERS: readonly Parameter[] = [
   'temperature',
@@ -19,18 +26,44 @@ export function calculateCauldron(ingredients: readonly Ingredient[]): Values {
   );
 }
 
+export function activeReactions(
+  ingredients: readonly Ingredient[],
+  difficulty: Difficulty,
+) {
+  const base = calculateCauldron(ingredients);
+  return REACTIONS.filter(
+    (reaction) =>
+      DIFFICULTY_SETTINGS[difficulty].reactions.includes(reaction.id) &&
+      reaction.isActive(ingredients, base),
+  );
+}
+export function calculateMixture(
+  ingredients: readonly Ingredient[],
+  difficulty: Difficulty,
+): Values {
+  const result = activeReactions(ingredients, difficulty).reduce(
+    (values, reaction) => reaction.apply(values),
+    calculateCauldron(ingredients),
+  );
+  return {
+    temperature: Math.round(result.temperature * 100) / 100,
+    density: Math.round(result.density * 100) / 100,
+    magicPower: Math.round(result.magicPower * 100) / 100,
+  };
+}
 export function checkBrew(
   ingredients: readonly Ingredient[],
   recipe: Recipe,
-  tolerance: number = RULES.tolerance,
+  difficulty: Difficulty = 'medium',
 ): boolean {
-  const values = calculateCauldron(ingredients);
+  const values = calculateMixture(ingredients, difficulty);
+  const rules = DIFFICULTY_SETTINGS[difficulty];
   return (
     ingredients.length > 0 &&
     PARAMETERS.every(
       (key) =>
-        values[key] >= recipe[key].min - tolerance &&
-        values[key] <= recipe[key].max + tolerance,
+        values[key] >= recipe[key].min - rules.tolerance &&
+        values[key] <= recipe[key].max + rules.tolerance,
     )
   );
 }
