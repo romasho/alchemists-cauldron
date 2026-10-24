@@ -1,5 +1,3 @@
 # Game data
 
-Place the ingredient catalogue, recipe pool, difficulty settings and reaction
-definitions here when their gameplay stories are implemented. Keep these modules
-independent of DOM rendering and browser storage.
+`ingredients.ts` holds the ordered eight-ingredient catalogue, `recipes.ts` the twenty recipes, `difficulty.ts` the single difficulty table, and `reactions.ts` the typed reaction catalogue. Medium enables Bubbling and Solar Frost; Hard adds Volatile Mix. Other catalogue entries are available for extending configured subsets. These modules do not access the DOM or storage.
