@@ -7,11 +7,19 @@ Built for the [RS School assignment](https://github.com/rolling-scopes-school/qu
 
 ## Current scope
 
-Precondition 1 and all Level 1 stories (US 1.1–1.6) are implemented.
-Level 1 uses the fixed Medium rules: six ingredients, four portions per cauldron,
-150 seconds, three lives, ±8 brew tolerance, 200 points and up to 10 bonus seconds.
-The source includes the full eight-ingredient catalogue and all twenty recipes;
-only Medium recipes are selected in Level 1. Levels 2 and 3 are not implemented.
+Precondition 1, Level 1 (US 1.1–1.6) and Level 2 (US 2.1–2.2) are implemented.
+Choose Easy, Medium or Hard in Menu before starting. Each difficulty uses its own
+shelf, recipe pool, cauldron limit, timer, lives, tolerance and brew rewards.
+Medium keeps the Level 1 rules. Reactions are configured for the future Level 3;
+Level 3 gameplay is not implemented.
+
+Unfinished runs save automatically after actions, every second, on pause and when
+leaving the page. Continue Game restores the exact stock, mixture, recipe, score,
+lives, difficulty and remaining time in paused state. New games replace the save;
+Exit to Menu and Game Over clear it. Invalid saves are discarded safely.
+Each difficulty has its own Top-10; existing Level 1 results remain in Medium.
+
+![Level 2 difficulty menu](docs/level-2-menu.png)
 
 [Public deployment](https://romasho.github.io/alchemists-cauldron/) (updated when changes reach `story-1`).
 
@@ -34,13 +42,13 @@ Shared requirements add 30 points at Level 1. The complete assignment is worth
 
 ## How to play
 
-1. Click **Start Game**. Each ingredient receives 2–15 portions.
-2. Click ingredient cards to add up to four portions, in order. T, D and M on each
+1. Choose a difficulty in **Menu**, then click **Start Game**. Each ingredient receives 2–15 portions.
+2. Click ingredient cards to add up to four portions (five on Hard), in order. T, D and M on each
    card mean Temperature, Density and Magic Power. The bars show signed sums,
    target zones and a moving marker; green means inside the exact recipe range.
-3. Click **Brew potion** to check all three sums with ±8 tolerance. Success awards
-   200 points, adds 10 seconds (maximum 150), and selects a random Medium recipe.
-   Failure loses one life. Both outcomes empty the cauldron and spend the portions.
+3. Click **Brew potion** to check all three sums with the selected tolerance.
+   Success awards points, adds time up to the starting limit, and selects a random
+   recipe for the chosen difficulty. Failure loses one life. Both outcomes empty the cauldron and spend the portions.
 4. **Pause** freezes the timer and hides the play field. **Resume** continues;
    **Exit to Menu** abandons the run. Switching to another tab also pauses.
 5. Time, lives or exhausted ingredients end the run. A final mixture can still
@@ -52,7 +60,8 @@ Shared requirements add 30 points at Level 1. The complete assignment is worth
 
 **Help** explains the rules. Controls use native buttons and support keyboard
 focus. Layouts adapt from 375 px to 1920 px; reduced motion is respected.
-Leaderboard data stays in this browser. Runs are not saved across reloads in Level 1.
+Leaderboard data and the unfinished run stay in this browser. After a reload,
+use **Continue Game**, then **Resume**. Difficulty cannot change during a run.
 
 ## Requirements and development
 

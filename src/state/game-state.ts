@@ -1,9 +1,11 @@
+import { DIFFICULTY_SETTINGS } from '../data/difficulty.ts';
 import { INGREDIENTS } from '../data/ingredients.ts';
 import { pickRecipe } from '../data/recipes.ts';
-import type { Ingredient, Recipe } from '../data/types.ts';
-import { checkBrew, createStock, RULES } from '../logic/brewing.ts';
+import type { Difficulty, Ingredient, Recipe } from '../data/types.ts';
+import { checkBrew, createStock, formatTime, RULES } from '../logic/brewing.ts';
 
 export interface GameState {
+  difficulty: Difficulty;
   status: 'menu' | 'playing' | 'paused' | 'game-over';
   score: number;
   timeLeft: number;
@@ -16,8 +18,9 @@ export interface GameState {
   message: string;
 }
 export const SHELF = INGREDIENTS.slice(0, RULES.shelfSize);
-export function createMenu(): GameState {
+export function createMenu(difficulty: Difficulty = 'medium'): GameState {
   return {
+    difficulty,
     status: 'menu',
     score: 0,
     timeLeft: 0,
@@ -33,17 +36,22 @@ export function createMenu(): GameState {
 export function startGame(
   now = Date.now(),
   random: () => number = Math.random,
+  difficulty: Difficulty = 'medium',
 ): GameState {
+  const rules = DIFFICULTY_SETTINGS[difficulty];
   return {
-    ...createMenu(),
+    ...createMenu(difficulty),
     status: 'playing',
-    timeLeft: RULES.time,
-    endTime: now + RULES.time,
-    lives: RULES.lives,
-    recipe: pickRecipe(random),
-    stock: createStock(SHELF, random),
+    timeLeft: rules.time,
+    endTime: now + rules.time,
+    lives: rules.lives,
+    recipe: pickRecipe(random, difficulty),
+    stock: createStock(getShelf(difficulty), random),
     message: 'Choose your ingredients. Find the balance.',
   };
+}
+export function getShelf(difficulty: Difficulty): readonly Ingredient[] {
+  return INGREDIENTS.slice(0, DIFFICULTY_SETTINGS[difficulty].shelfSize);
 }
 export function updateTime(state: GameState, now = Date.now()): void {
   if (state.status !== 'playing') return;
@@ -62,16 +70,16 @@ export function addIngredient(
   updateTime(state, now);
   if (
     state.status !== 'playing' ||
-    state.cauldron.length >= RULES.capacity ||
+    state.cauldron.length >= DIFFICULTY_SETTINGS[state.difficulty].capacity ||
     (state.stock[id] ?? 0) <= 0
   )
     return;
-  const ingredient = SHELF.find((item) => item.id === id);
+  const ingredient = getShelf(state.difficulty).find((item) => item.id === id);
   if (!ingredient) return;
   state.cauldron.push(ingredient);
   state.stock[id] = (state.stock[id] ?? 0) - 1;
   state.message =
-    state.cauldron.length === RULES.capacity
+    state.cauldron.length === DIFFICULTY_SETTINGS[state.difficulty].capacity
       ? 'Cauldron full. Time to brew!'
       : `${ingredient.name} added.`;
 }
@@ -83,12 +91,13 @@ export function brew(
   updateTime(state, now);
   if (state.status !== 'playing' || !state.cauldron.length || !state.recipe)
     return;
-  if (checkBrew(state.cauldron, state.recipe)) {
-    state.score += RULES.score;
-    state.timeLeft = Math.min(RULES.time, state.timeLeft + RULES.bonus);
+  const rules = DIFFICULTY_SETTINGS[state.difficulty];
+  if (checkBrew(state.cauldron, state.recipe, rules.tolerance)) {
+    state.score += rules.score;
+    state.timeLeft = Math.min(rules.time, state.timeLeft + rules.bonus);
     state.endTime = now + state.timeLeft;
-    state.recipe = pickRecipe(random);
-    state.message = 'Potion brewed! +200 points · +10 seconds (max 02:30).';
+    state.recipe = pickRecipe(random, state.difficulty);
+    state.message = `Potion brewed! +${String(rules.score)} points · +${String(rules.bonus / 1000)} seconds (max ${formatTime(rules.time)}).`;
   } else {
     state.lives -= 1;
     state.message = 'The mixture failed. One life lost. Try again!';

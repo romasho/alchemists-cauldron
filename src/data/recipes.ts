@@ -40,8 +40,11 @@ export const RECIPES: readonly Recipe[] = [
   recipe(20, 'hard', 'Ember Soup', 62, 24, 37),
 ];
 
-export function pickRecipe(random: () => number = Math.random): Recipe {
-  const pool = RECIPES.filter((item) => item.difficulty === 'medium');
+export function pickRecipe(
+  random: () => number = Math.random,
+  difficulty: Difficulty = 'medium',
+): Recipe {
+  const pool = RECIPES.filter((item) => item.difficulty === difficulty);
   const selected = pool[Math.floor(random() * pool.length)];
   if (!selected) throw new Error('Recipe pool is empty.');
   return selected;

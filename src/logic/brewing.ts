@@ -1,3 +1,4 @@
+import { DIFFICULTY_SETTINGS } from '../data/difficulty.ts';
 import type { Ingredient, Parameter, Recipe, Values } from '../data/types.ts';
 
 export const PARAMETERS: readonly Parameter[] = [
@@ -5,15 +6,7 @@ export const PARAMETERS: readonly Parameter[] = [
   'density',
   'magicPower',
 ];
-export const RULES = {
-  shelfSize: 6,
-  capacity: 4,
-  time: 150_000,
-  lives: 3,
-  tolerance: 8,
-  score: 200,
-  bonus: 10_000,
-} as const;
+export const RULES = DIFFICULTY_SETTINGS.medium;
 
 export function calculateCauldron(ingredients: readonly Ingredient[]): Values {
   return ingredients.reduce<Values>(
@@ -29,14 +22,15 @@ export function calculateCauldron(ingredients: readonly Ingredient[]): Values {
 export function checkBrew(
   ingredients: readonly Ingredient[],
   recipe: Recipe,
+  tolerance: number = RULES.tolerance,
 ): boolean {
   const values = calculateCauldron(ingredients);
   return (
     ingredients.length > 0 &&
     PARAMETERS.every(
       (key) =>
-        values[key] >= recipe[key].min - RULES.tolerance &&
-        values[key] <= recipe[key].max + RULES.tolerance,
+        values[key] >= recipe[key].min - tolerance &&
+        values[key] <= recipe[key].max + tolerance,
     )
   );
 }
