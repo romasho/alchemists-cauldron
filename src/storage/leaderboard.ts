@@ -1,5 +1,4 @@
 import type { Difficulty } from '../data/types.ts';
-
 export interface Entry {
   name: string;
   score: number;
@@ -31,15 +30,14 @@ export function rankEntries(entries: readonly Entry[]): Entry[] {
     .sort((a, b) => b.score - a.score || a.date - b.date)
     .slice(0, 10);
 }
-function leaderboardKey(difficulty: Difficulty): string {
-  return difficulty === 'medium'
+const boardKey = (difficulty: Difficulty): string =>
+  difficulty === 'medium'
     ? LEADERBOARD_KEY
     : `${LEADERBOARD_KEY}-${difficulty}`;
-}
 export function readLeaderboard(difficulty: Difficulty = 'medium'): Entry[] {
   try {
     const value: unknown = JSON.parse(
-      localStorage.getItem(leaderboardKey(difficulty)) ?? '[]',
+      localStorage.getItem(boardKey(difficulty)) ?? '[]',
     );
     return Array.isArray(value) ? rankEntries(value.filter(isEntry)) : [];
   } catch {
@@ -52,7 +50,7 @@ export function writeLeaderboard(
 ): boolean {
   try {
     localStorage.setItem(
-      leaderboardKey(difficulty),
+      boardKey(difficulty),
       JSON.stringify(rankEntries(entries)),
     );
     return true;

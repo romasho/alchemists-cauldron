@@ -1,0 +1,905 @@
+{
+  "date": "2026-10-24",
+  "cases": [
+    {
+      "fixture": "ready",
+      "difficulty": "easy",
+      "cardsOnShelf": 4,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 375,
+      "height": 667,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 37
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 371
+        },
+        {
+          "selector": ".ingredient",
+          "height": 125
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 17
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 338
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 245
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 357
+        },
+        {
+          "selector": ".book-page",
+          "height": 251
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 340
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 83
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 180
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 549
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 901
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1283
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "full",
+      "difficulty": "hard",
+      "cardsOnShelf": 8,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 375,
+      "height": 667,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 37
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 635
+        },
+        {
+          "selector": ".ingredient",
+          "height": 125
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 17
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 390
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 245
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 357
+        },
+        {
+          "selector": ".book-page",
+          "height": 251
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 340
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 83
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 183
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 552
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 904
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1551
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "depleted",
+      "difficulty": "medium",
+      "cardsOnShelf": 6,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 37
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 503
+        },
+        {
+          "selector": ".ingredient",
+          "height": 125
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 17
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 338
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 245
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 357
+        },
+        {
+          "selector": ".book-page",
+          "height": 251
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 340
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 83
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 183
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 552
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 904
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1419
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "long",
+      "difficulty": "hard",
+      "cardsOnShelf": 8,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 550,
+      "height": 720,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 37
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 635
+        },
+        {
+          "selector": ".ingredient",
+          "height": 125
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 17
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 338
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 245
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 386
+        },
+        {
+          "selector": ".book-page",
+          "height": 280
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 340
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 83
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 183
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 580
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 932
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1579
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "ready",
+      "difficulty": "easy",
+      "cardsOnShelf": 4,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 768,
+      "height": 1024,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 98
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 316
+        },
+        {
+          "selector": ".ingredient",
+          "height": 92
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 19
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 399
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 300
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 447
+        },
+        {
+          "selector": ".book-page",
+          "height": 333
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 397
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 96
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 274
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 274
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 733
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1061
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "ready",
+      "difficulty": "hard",
+      "cardsOnShelf": 8,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 800,
+      "height": 600,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 98
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 514
+        },
+        {
+          "selector": ".ingredient",
+          "height": 92
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 19
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 399
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 300
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 447
+        },
+        {
+          "selector": ".book-page",
+          "height": 333
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 397
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 96
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 253
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 253
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 712
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1238
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "ready",
+      "difficulty": "medium",
+      "cardsOnShelf": 6,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 801,
+      "height": 600,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 98
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 415
+        },
+        {
+          "selector": ".ingredient",
+          "height": 92
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 19
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 399
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 300
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 447
+        },
+        {
+          "selector": ".book-page",
+          "height": 333
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 397
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 96
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 253
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 253
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 712
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 1139
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "full",
+      "difficulty": "hard",
+      "cardsOnShelf": 8,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 1024,
+      "height": 768,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 85
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 409
+        },
+        {
+          "selector": ".ingredient",
+          "height": 74
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 13
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 326
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 185
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 412
+        },
+        {
+          "selector": ".book-page",
+          "height": 304
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 111
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 71
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 118
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 548
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 113
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 210
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "long",
+      "difficulty": "hard",
+      "cardsOnShelf": 8,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 1280,
+      "height": 720,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 91
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 408
+        },
+        {
+          "selector": ".ingredient",
+          "height": 74
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 13
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 314
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 185
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 469
+        },
+        {
+          "selector": ".book-page",
+          "height": 361
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 111
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 71
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 113
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 594
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 113
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 267
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "ready",
+      "difficulty": "medium",
+      "cardsOnShelf": 6,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 1366,
+      "height": 768,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 93
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 415
+        },
+        {
+          "selector": ".ingredient",
+          "height": 50
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 18
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 316
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 238
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 375
+        },
+        {
+          "selector": ".book-page",
+          "height": 267
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 111
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 71
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 136
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 546
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 113
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 218
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "ready",
+      "difficulty": "easy",
+      "cardsOnShelf": 4,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 1440,
+      "height": 900,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 95
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 348
+        },
+        {
+          "selector": ".ingredient",
+          "height": 58
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 18
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 357
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 279
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 432
+        },
+        {
+          "selector": ".book-page",
+          "height": 320
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 130
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 73
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 129
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 589
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 113
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 220
+        }
+      ],
+      "images": true
+    },
+    {
+      "fixture": "ready",
+      "difficulty": "hard",
+      "cardsOnShelf": 8,
+      "valuesOnCards": 0,
+      "backgroundFullViewport": true,
+      "width": 1920,
+      "height": 1080,
+      "overflow": false,
+      "brewVisible": true,
+      "sceneOverlapsBrew": false,
+      "hintOverlapsFeedback": false,
+      "recipeRowOverflow": false,
+      "boxes": [
+        {
+          "selector": ".title-sign",
+          "height": 108
+        },
+        {
+          "selector": ".shelf-panel",
+          "height": 601
+        },
+        {
+          "selector": ".ingredient",
+          "height": 56
+        },
+        {
+          "selector": ".ingredient-name",
+          "height": 18
+        },
+        {
+          "selector": ".cauldron-panel",
+          "height": 466
+        },
+        {
+          "selector": ".cauldron-art",
+          "height": 356
+        },
+        {
+          "selector": ".recipe-panel",
+          "height": 495
+        },
+        {
+          "selector": ".book-page",
+          "height": 381
+        },
+        {
+          "selector": ".scales-panel",
+          "height": 142
+        },
+        {
+          "selector": ".brew-actions",
+          "height": 82
+        }
+      ],
+      "order": [
+        {
+          "selector": ".recipe-panel",
+          "top": 204
+        },
+        {
+          "selector": ".scales-panel",
+          "top": 764
+        },
+        {
+          "selector": ".shelf-panel",
+          "top": 151
+        },
+        {
+          "selector": ".cauldron-panel",
+          "top": 286
+        }
+      ],
+      "images": true
+    }
+  ]
+}
